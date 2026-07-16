@@ -1,37 +1,80 @@
-# Developer Quick Referencing
+# ImmunoType Developer Guide
 
-## Clone the Repo
+## Overview
 
-```bash
-git clone https://github.com/<username>/ImmunoType.git
-cd ImmunoType
-```
+This document contains the setup instructions and development workflow for the ImmunoType project.
+
+ImmunoType is a research project focused on single-cell analysis and machine learning workflows.
+
+Current development environment:
+
+- Operating System: macOS
+- Python: 3.12.x
+- Virtual Environment: `.venv`
+- Package Manager: pip
+- Notebook Environment: JupyterLab
+- Version Control: Git + GitHub
+
+Main research libraries:
+
+- Scanpy
+- AnnData
+- NumPy
+- Pandas
+- scikit-learn
+- PyTorch
+- SHAP
+- XGBoost
+- matplotlib
+- seaborn
+- umap-learn
+
 
 ---
 
-## Create the Virtual Environment (first time only)
+# Repository Location
+
+Current repository:
+
+```bash
+~/Documents/GitHub/ImmunoType
+```
+
+Move into the repository:
+
+```bash
+cd ~/Documents/GitHub/ImmunoType
+```
+
+
+---
+
+# Virtual Environment
+
+## Create the Virtual Environment
+
+Only needed the first time:
 
 ```bash
 python3 -m venv .venv
 ```
 
----
 
-## Activate the venv
+## Activate the Virtual Environment
 
-macOS / Linux
+macOS / Linux:
 
 ```bash
 source .venv/bin/activate
 ```
 
-Windows
 
-```powershell
-.venv\Scripts\activate
+After activation the terminal should show:
+
+```bash
+(.venv)
 ```
 
----
 
 ## Deactivate the Virtual Environment
 
@@ -39,80 +82,249 @@ Windows
 deactivate
 ```
 
----
 
-## Update requirements.txt
-
-After installing new packages:
-
-```bash
-pip list
-```
-
----
-
-## Check python version
+## Verify Python Version
 
 ```bash
 python --version
 ```
 
----
+Expected:
 
-## Check which Python is being used
+```text
+Python 3.12.x
+```
+
+
+## Verify Python Location
 
 ```bash
 which python
 ```
 
-Should return something similar to:
+Expected:
 
-```
-
+```text
 .../ImmunoType/.venv/bin/python
 ```
 
+
 ---
 
-# Useful Git Commands (I always forget too)
+# Installing Dependencies
 
-## Check Repo status
+Install from requirements:
+
+```bash
+pip install -r requirements.txt
+```
+
+
+Install exact locked versions:
+
+```bash
+pip install -r requirements-lock.txt
+```
+
+
+After installing new packages:
+
+```bash
+pip freeze > requirements-lock.txt
+```
+
+
+---
+
+# VS Code Workflow
+
+Open the project:
+
+```bash
+code .
+```
+
+
+VS Code should automatically detect:
+
+```
+ImmunoType/.venv
+```
+
+as the Python interpreter.
+
+
+To manually select:
+
+1. Open Command Palette
+2. Select:
+
+```
+Python: Select Interpreter
+```
+
+3. Choose:
+
+```
+.venv/bin/python
+```
+
+
+---
+
+# Starting a Research Session
+
+The project uses external helper scripts stored outside the repository.
+
+Location:
+
+```bash
+~/Documents/dev-tools/ImmunoType/
+```
+
+
+## Start Session
+
+Run:
+
+```bash
+~/Documents/dev-tools/ImmunoType/start_session.sh
+```
+
+
+The script checks:
+
+- Current date/time
+- Repository location
+- Virtual environment
+- Python version
+- Git status
+- Latest commits
+- Installed packages
+- Import availability
+- Jupyter installation
+
+
+The script can optionally launch JupyterLab.
+
+
+---
+
+# Ending a Research Session
+
+Run:
+
+```bash
+~/Documents/dev-tools/ImmunoType/end_session.sh
+```
+
+
+The script records:
+
+- Session date
+- Current repository state
+- Git status
+- Latest commit
+- Project structure
+- Installed packages
+- Import tests
+- Notebook files
+- Modified files
+
+
+Reports are saved outside the repository:
+
+```bash
+~/Documents/dev-tools/ImmunoType/logs/
+```
+
+
+---
+
+# JupyterLab
+
+## Start JupyterLab Manually
+
+Activate the environment:
+
+```bash
+source .venv/bin/activate
+```
+
+Launch:
+
+```bash
+jupyter lab
+```
+
+
+Jupyter should open in:
+
+```text
+http://localhost:8888
+```
+
+
+---
+
+# Notebook Workflow
+
+Notebooks are stored in:
+
+```text
+notebooks/
+```
+
+
+Current notebooks:
+
+```text
+notebooks/01_dataset_exploration.ipynb
+```
+
+
+Recommended workflow:
+
+1. Activate `.venv`
+2. Open JupyterLab
+3. Select the ImmunoType kernel
+4. Run notebook cells
+5. Save results
+
+
+---
+
+# Git Workflow
+
+## Check Status
 
 ```bash
 git status
 ```
 
----
 
-## Stage All Changes
+## Pull Latest Changes
+
+```bash
+git pull
+```
+
+
+## Stage Changes
 
 ```bash
 git add .
 ```
 
----
-
-## Stage One File
-
-```bash
-git add README.md
-```
-
----
 
 ## Commit Changes
-
-```bash
-git commit -m "Meaningful commit message"
-```
 
 Example:
 
 ```bash
-git commit -m "Implement Scanpy preprocessing pipeline"
+git commit -m "Add preprocessing pipeline"
 ```
 
---- 
 
 ## Push Changes
 
@@ -120,76 +332,66 @@ git commit -m "Implement Scanpy preprocessing pipeline"
 git push
 ```
 
----
-
-## Pull latest Changes
-
-```bash
-git pull
-```
-
----
 
 ## View Commit History
 
 ```bash
-git log --online
+git log --oneline
 ```
+
 
 ---
 
-## Switch Branches
+# Project Structure
 
-```bash
-git checkout main
 ```
+ImmunoType/
+│
+├── data/
+│   ├── raw/
+│   └── processed/
+│
+├── docs/
+│   ├── developer_guide.md
+│   ├── meeting_notes.md
+│   └── research_log.md
+│
+├── figures/
+│
+├── models/
+│
+├── notebooks/
+│
+├── paper/
+│
+├── results/
+│
+├── src/
+│
+├── tests/
+│
+├── requirements.txt
+└── requirements-lock.txt
+```
+
 
 ---
 
-# Jupyter
+# Common Commands
 
-## Start Jupyter Lab
-
-```bash
-jupyter lab
-```
-
----
-
-# Running Python Files
-
-Run a script:
-```bash
-python src/train.py
-```
-
----
-
-# Useful Commands
-
-List project files
-
-```bash
-ls
-```
-
-Current Directory:
+Current directory:
 
 ```bash
 pwd
 ```
 
-Move into a folder:
+
+List files:
 
 ```bash
-cd data/raw
+ls
 ```
 
-Move up one directory:
-
-```bash
-cd ...
-```
 
 Clear terminal:
 
@@ -197,33 +399,83 @@ Clear terminal:
 clear
 ```
 
+
+Move directories:
+
+```bash
+cd folder_name
+```
+
+
+Move up:
+
+```bash
+cd ..
+```
+
+
 ---
 
-# Project Startup Checklist
+# Troubleshooting
 
-1. Open terminal
-2. Navigate to project
+## Python Not Found
 
-```bash
-cd ~/Documents/GitHub/ImmunoType
-```
-
-3. Activate virtual environment
+Check environment:
 
 ```bash
-source.venv/bin/activate
+which python
 ```
 
-4. Open VS code
+If incorrect:
 
 ```bash
-code .
+source .venv/bin/activate
 ```
 
-5. Pull latest changes
+
+---
+
+## Package Import Errors
+
+Update environment:
 
 ```bash
-git pull
+pip install -r requirements-lock.txt
 ```
 
-6. Work
+
+---
+
+## XGBoost macOS Error
+
+If XGBoost cannot find OpenMP:
+
+```bash
+brew install libomp
+```
+
+
+Test:
+
+```bash
+python -c "import xgboost; print(xgboost.__version__)"
+```
+
+
+---
+
+# Development Notes
+
+Keep this file limited to:
+
+- Environment setup
+- Commands
+- Development workflow
+- Tool usage
+
+Research decisions, experiment results, and project planning belong in:
+
+```
+docs/research_log.md
+docs/meeting_notes.md
+```
