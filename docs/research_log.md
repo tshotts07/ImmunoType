@@ -1,10 +1,14 @@
 # ImmunoType Research Log
 
-## Overview
+## Project Overview
 
-This document tracks the research progress of the ImmunoType project.
+**ImmunoType** is a computational immunology research project investigating whether machine learning can accurately classify peripheral blood mononuclear cell (PBMC) immune cell types from single-cell RNA sequencing (scRNA-seq) data while identifying the genes that contribute most strongly to model predictions.
 
-Each section represents a project phase and documents the research activities, experiments, observations, and conclusions from that phase.
+### Core Research Question
+
+> Can machine learning accurately classify PBMC immune cell types from scRNA-seq data, and which genes contribute most to those predictions?
+
+This document records the scientific progress of the project. Each phase documents the research objectives, experiments, observations, decisions, and conclusions that guide the development of the analysis pipeline.
 
 ---
 
@@ -12,27 +16,27 @@ Each section represents a project phase and documents the research activities, e
 
 ## Objective
 
-Prepare the project environment so that research and analysis workflows can begin.
+Prepare a reproducible research environment for computational analysis.
 
----
+## Activities
 
-## Research Activities
-
-No biological or computational research experiments were performed during this phase.
-
-Phase 0 focused on preparing the foundation required for future research activities.
-
----
-
-## Current Status
-
-The research environment is prepared for initial analysis.
-
----
+- Created the ImmunoType repository.
+- Established a reproducible directory structure.
+- Configured the Python development environment.
+- Designed the notebook organization around research objectives.
 
 ## Findings
 
-No research findings were generated during this phase.
+No biological or computational findings were generated during this phase.
+
+## Decisions
+
+- Separate preprocessing, modeling, evaluation, and interpretation into distinct research phases.
+- Record scientific decisions alongside code implementation.
+
+## Status
+
+Complete
 
 ---
 
@@ -40,160 +44,331 @@ No research findings were generated during this phase.
 
 ## Objective
 
-Evaluate candidate datasets for the ImmunoType project and determine whether they are suitable for supervised immune cell classification.
+Evaluate candidate PBMC datasets and determine their suitability for preprocessing development, supervised classification, and biological interpretation.
 
 ---
 
-## Research Activities
+## PBMC3K Dataset
 
-### PBMC 3k Dataset
+### Activities
 
-Loaded the PBMC 3k dataset provided by Scanpy and explored the AnnData object.
+Loaded the Scanpy PBMC3K dataset and examined:
 
-The following components were inspected:
+- `adata.X`
+- `adata.obs`
+- `adata.var`
+- `adata.uns`
 
-- `adata.X` – Gene expression matrix
-- `adata.obs` – Cell metadata
-- `adata.var` – Gene metadata
-- `adata.uns` – Unstructured metadata
+### Dataset Dimensions
 
-**Dataset dimensions**
+- **Cells:** 2,700
+- **Genes:** 32,738
 
-- 2,700 cells
-- 32,738 genes
+### Findings
+
+- Contains full-transcriptome gene expression data.
+- Does not include immune-cell annotations suitable for supervised machine learning.
+- Appropriate for developing and validating a preprocessing workflow.
 
 ---
 
-### PBMC68k Reduced Dataset
+## PBMC68K Reduced Dataset
 
-Loaded the Scanpy `pbmc68k_reduced` dataset and examined its metadata and available cell labels.
+### Activities
 
-**Dataset dimensions**
+Loaded `pbmc68k_reduced` and inspected its processed expression matrix, metadata, embeddings, and immune-cell labels.
 
-- 700 cells
-- 765 genes
+### Dataset Dimensions
 
-**Available metadata**
+- **Cells:** 700
+- **Genes:** 765
 
-- Cell type labels (`bulk_labels`)
-- Quality control metrics
-- PCA and UMAP embeddings
-- Highly variable gene annotations
+### Available Metadata
 
-**Observed immune cell populations**
+- Cell-type labels (`bulk_labels`)
+- QC metrics
+- PCA
+- UMAP
+- Highly variable genes
+- Neighbor graph
+- Marker-gene analysis
+
+### Immune Cell Types
 
 - Dendritic cells
-- CD14+ Monocytes
+- CD14+ monocytes
 - CD19+ B cells
 - CD4+ T-cell subsets
 - CD8+ T-cell subsets
 - CD56+ NK cells
 - CD34+ progenitor cells
 
+### Findings
+
+- Suitable for supervised pipeline development.
+- Already heavily preprocessed.
+- Reduced feature space limits biological interpretation.
+- Class imbalance should be considered during model evaluation.
+
+## Phase 1 Decisions
+
+- Use PBMC3K as the preprocessing development dataset.
+- Use PBMC68K Reduced as the machine-learning development dataset.
+- Transition to a larger annotated PBMC dataset for final experiments and biological interpretation.
+
+## Status
+
+Complete
+
 ---
 
-## Findings
+# Phase 2 — Preprocessing
 
-- The PBMC 3k dataset contains gene expression data but does not include cell-type annotations required for supervised machine learning.
-- The PBMC68k reduced dataset contains annotated immune cell identities suitable for supervised classification.
-- The PBMC68k reduced dataset is already preprocessed and contains a reduced number of cells and genes, making it unsuitable as the final research dataset for feature discovery and biological interpretation.
-- The PBMC68k reduced dataset exhibits class imbalance across immune cell populations, which should be considered during model evaluation.
+## Objective
+
+Develop a transparent and scientifically justified preprocessing workflow for raw PBMC scRNA-seq data.
 
 ---
 
-## Decisions
-
-- Use PBMC 3k as a learning dataset for understanding Scanpy and the AnnData data structure.
-- Use PBMC68k reduced as the development dataset for building and validating the machine learning pipeline.
-- Transition to a larger annotated PBMC dataset containing the full transcriptome for the final experimental analysis and biological interpretation.
-
-## 2026-07-23 — Phase 2: Preprocessing Audit
+## 2.1 Preprocessing Audit of PBMC68K Reduced
 
 ### Objective
 
-Determine the preprocessing state of the development dataset (`pbmc68k_reduced`) before designing a preprocessing workflow for the final research dataset.
+Determine the preprocessing state of the development dataset.
 
 ### Activities
 
-- Loaded `pbmc68k_reduced.h5ad` into Scanpy.
-- Inspected the `AnnData` object structure (`obs`, `var`, `uns`, `obsm`, `varm`, `obsp`, `layers`, and `raw`).
+- Inspected the AnnData object.
 - Compared `adata.X` and `adata.raw.X`.
-- Investigated sparse versus dense matrix representations in Scanpy.
-- Examined metadata stored in `adata.uns` to identify previously completed analysis steps.
+- Examined stored metadata.
+- Investigated matrix formats.
 
 ### Findings
 
 #### Matrix Structure
 
-- `adata.X` is a dense NumPy array containing both positive and negative values, consistent with scaled and centered expression data.
-- `adata.raw.X` is stored as a sparse CSR matrix containing positive decimal values.
-- No additional matrices are stored in `adata.layers`.
+- `adata.X` is a dense scaled matrix.
+- `adata.raw.X` is a sparse normalized expression matrix.
+- No additional expression layers exist.
 
-#### Preprocessing Assessment
+#### Confirmed Downstream Analyses
 
-Evidence indicates that the dataset is **analysis-ready rather than raw**.
+Metadata confirms:
 
-Strong evidence suggests:
+- PCA
+- Neighbor graph construction
+- Louvain clustering
+- Marker-gene identification using logistic regression
 
-- `adata.raw.X` contains normalized and log-transformed expression values.
-- `adata.X` contains scaled expression values used for dimensionality reduction.
+Marker analysis used:
 
-The exact normalization procedure cannot be confirmed because preprocessing parameters were not retained in the object metadata.
+- `groupby="bulk_labels"`
+- `reference="rest"`
+- `use_raw=True`
 
-#### Metadata Verification
+### Conclusion
 
-Inspection of `adata.uns` confirmed that downstream analyses have already been performed.
+PBMC68K Reduced is an analysis-ready dataset.
 
-Confirmed analyses include:
+Normalization parameters cannot be directly recovered and therefore should not be assumed.
 
-- Principal Component Analysis (PCA)
-- Neighbor graph construction (`n_neighbors = 10`)
-- Louvain clustering (`resolution = 1`, `random_state = 0`)
-- Marker gene identification using logistic regression (`method = "logreg"`)
+---
 
-The differential expression analysis was performed using:
+## 2.2 Proposed Preprocessing Workflow
 
-- `groupby = "bulk_labels"`
-- `reference = "rest"`
-- `use_raw = True`
+1. Load raw counts.
+2. Calculate QC metrics.
+3. Inspect QC distributions.
+4. Filter low-quality cells.
+5. Filter low-information genes.
+6. Normalize sequencing depth.
+7. Log-transform expression values.
+8. Identify highly variable genes.
+9. Scale expression values.
+10. Perform dimensionality reduction.
+11. Prepare machine-learning feature matrices.
 
-This confirms that marker gene identification was performed using `adata.raw.X` rather than the scaled matrix.
+Every preprocessing step should have a biological or statistical justification.
 
-### Inferred Preprocessing Workflow
+---
 
-```text
-Raw count matrix
-        ↓
-Normalization
-        ↓
-Log transformation
-        ↓
-Stored in adata.raw.X
-        ↓
-Highly variable gene selection
-        ↓
-Scaling and centering
-        ↓
-Stored in adata.X
-        ↓
-Principal Component Analysis (PCA)
-        ↓
-Neighbor graph construction
-        ↓
-UMAP embedding
-        ↓
-Louvain clustering
-        ↓
-Marker gene identification
-```
+## 2.3 Raw PBMC3K Inspection
 
-### Conclusions
+### Dataset Structure
 
-The development dataset is a fully processed, analysis-ready dataset intended for downstream analysis rather than preprocessing practice.
+- 2,700 cells
+- 32,738 genes
+- Sparse CSR count matrix
+- No cell metadata
+- No stored preprocessing
 
-The normalization and log-transformation steps remain **inferred** from the stored data because their exact parameters are not preserved in the metadata. However, downstream analyses (PCA, neighbor graph construction, clustering, and marker gene identification) are directly confirmed through the stored Scanpy metadata.
+### Conclusion
 
-### Next Steps
+PBMC3K appears to contain genuine raw count data suitable for preprocessing development.
 
-- Design a preprocessing workflow suitable for raw scRNA-seq datasets.
-- Apply that workflow to a fully annotated raw PBMC dataset for the primary research experiments.
+---
+
+## 2.4 Quality Control
+
+### Quality Metrics
+
+Quality control was based on:
+
+- Total counts per cell
+- Number of detected genes
+- Percentage mitochondrial RNA
+- Ribosomal RNA percentage (informational only)
+
+Summary statistics and visual inspection showed:
+
+- Most cells contained approximately 700–1,000 detected genes.
+- Most cells contained approximately 1,500–3,000 counts.
+- Most cells contained approximately 2% mitochondrial RNA.
+- Only a small number of mitochondrial outliers were observed.
+- Overall dataset quality appeared high.
+
+Filtering thresholds were selected after examining the empirical distributions rather than applying tutorial defaults.
+
+---
+
+## 2.5 Cell Filtering
+
+### Candidate Thresholds
+
+| Criterion | Cells Removed |
+|-----------|--------------:|
+| <200 genes | 0 |
+| <300 genes | 15 |
+| >2500 genes | 5 |
+| >3000 genes | 2 |
+| >5% mitochondrial RNA | 57 |
+| >10% mitochondrial RNA | 6 |
+
+### Final Criteria
+
+Cells were retained when they satisfied:
+
+- ≥300 detected genes
+- <5% mitochondrial RNA
+
+### Rationale
+
+Thresholds were selected using both published guidance and the observed distributions within PBMC3K.
+
+High-gene-count cells were not removed because elevated complexity alone cannot distinguish true biological cells from doublets.
+
+### Filtering Outcome
+
+Original cells:
+
+- **2,700**
+
+Remaining cells:
+
+- **2,633**
+
+Removed cells:
+
+- **67**
+
+Percentage removed:
+
+- **2.48%**
+
+### Conclusion
+
+Only a small proportion of cells required removal, indicating that PBMC3K was already a high-quality dataset.
+
+---
+
+## 2.6 Gene Filtering
+
+### Candidate Thresholds
+
+| Minimum Cells | Genes Removed |
+|--------------|--------------:|
+| 1 | 16,132 |
+| 3 | 19,046 |
+| 5 | 20,192 |
+| 10 | 21,620 |
+
+### Final Criterion
+
+Genes were retained only if detected in **three or more cells**.
+
+### Rationale
+
+Gene filtering was treated strictly as technical quality control.
+
+Genes observed in only one or two cells provide insufficient observations for reliable downstream analysis and substantially increase matrix sparsity.
+
+This filtering step **does not imply biological irrelevance**.
+
+Predictive importance will instead be determined later through:
+
+- Highly variable gene selection
+- Machine-learning models
+- SHAP interpretation
+
+### Filtering Outcome
+
+Genes before filtering:
+
+- **32,738**
+
+Genes after filtering:
+
+- **13,692**
+
+Genes removed:
+
+- **19,046**
+
+Percentage removed:
+
+- **58.18%**
+
+### Conclusion
+
+Despite removing over half of the original genes, the filtered dataset retains more than 13,000 genes, providing ample information for downstream preprocessing and classification.
+
+---
+
+## Phase 2 Progress
+
+### Completed
+
+- Preprocessing audit
+- Raw dataset inspection
+- Quality-control metric calculation
+- QC visualization
+- Cell filtering
+- Gene filtering
+
+### Remaining
+
+- Normalize counts
+- Log transformation
+- Highly variable gene selection
+- Scaling
+- PCA
+- Machine-learning feature preparation
+
+## Current Status
+
+Phase 2 is approximately **45% complete**.
+
+The quality-control stage is complete.
+
+The next session will begin with normalization and log transformation.
+
+---
+
+## Notes for the Final Paper
+
+The Methods section should justify preprocessing decisions using both:
+
+- Published scRNA-seq preprocessing literature.
+- Empirical evidence observed within the PBMC3K dataset.
+
+This combination provides stronger methodological support than relying solely on conventional tutorial thresholds.
