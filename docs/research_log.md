@@ -4,7 +4,7 @@
 
 **ImmunoType** is a computational immunology research project investigating whether machine learning can accurately classify peripheral blood mononuclear cell (PBMC) immune cell types from single-cell RNA sequencing (scRNA-seq) data while identifying the genes that contribute most strongly to model predictions.
 
-### Core Research Question
+## Core Research Question
 
 > Can machine learning accurately classify PBMC immune cell types from scRNA-seq data, and which genes contribute most to those predictions?
 
@@ -36,7 +36,7 @@ No biological or computational findings were generated during this phase.
 
 ## Status
 
-Complete
+**Complete**
 
 ---
 
@@ -118,7 +118,7 @@ Loaded `pbmc68k_reduced` and inspected its processed expression matrix, metadata
 
 ## Status
 
-Complete
+**Complete**
 
 ---
 
@@ -126,7 +126,7 @@ Complete
 
 ## Objective
 
-Develop a transparent and scientifically justified preprocessing workflow for raw PBMC scRNA-seq data.
+Develop a transparent, reproducible, and scientifically justified preprocessing workflow for raw PBMC scRNA-seq data.
 
 ---
 
@@ -177,7 +177,7 @@ Normalization parameters cannot be directly recovered and therefore should not b
 ## 2.2 Proposed Preprocessing Workflow
 
 1. Load raw counts.
-2. Calculate QC metrics.
+2. Calculate quality-control metrics.
 3. Inspect QC distributions.
 4. Filter low-quality cells.
 5. Filter low-information genes.
@@ -185,10 +185,10 @@ Normalization parameters cannot be directly recovered and therefore should not b
 7. Log-transform expression values.
 8. Identify highly variable genes.
 9. Scale expression values.
-10. Perform dimensionality reduction.
+10. Perform principal component analysis.
 11. Prepare machine-learning feature matrices.
 
-Every preprocessing step should have a biological or statistical justification.
+Each preprocessing step should have a biological or statistical justification.
 
 ---
 
@@ -204,7 +204,7 @@ Every preprocessing step should have a biological or statistical justification.
 
 ### Conclusion
 
-PBMC3K appears to contain genuine raw count data suitable for preprocessing development.
+PBMC3K contains raw count data suitable for developing and validating a complete preprocessing pipeline.
 
 ---
 
@@ -214,20 +214,21 @@ PBMC3K appears to contain genuine raw count data suitable for preprocessing deve
 
 Quality control was based on:
 
-- Total counts per cell
-- Number of detected genes
+- Total UMI counts per cell
+- Number of detected genes per cell
 - Percentage mitochondrial RNA
-- Ribosomal RNA percentage (informational only)
+- Percentage ribosomal RNA (informational only)
 
-Summary statistics and visual inspection showed:
+Visual inspection and summary statistics showed:
 
 - Most cells contained approximately 700–1,000 detected genes.
-- Most cells contained approximately 1,500–3,000 counts.
+- Most cells contained approximately 1,500–3,000 total counts.
 - Most cells contained approximately 2% mitochondrial RNA.
 - Only a small number of mitochondrial outliers were observed.
-- Overall dataset quality appeared high.
 
-Filtering thresholds were selected after examining the empirical distributions rather than applying tutorial defaults.
+Overall dataset quality appeared high.
+
+Filtering thresholds were selected after examining the empirical distributions rather than relying solely on tutorial defaults.
 
 ---
 
@@ -246,38 +247,29 @@ Filtering thresholds were selected after examining the empirical distributions r
 
 ### Final Criteria
 
-Cells were retained when they satisfied:
+Cells were retained only if they satisfied:
 
 - ≥300 detected genes
 - <5% mitochondrial RNA
 
 ### Rationale
 
-Thresholds were selected using both published guidance and the observed distributions within PBMC3K.
+Thresholds were selected using both published recommendations and the observed PBMC3K distributions.
 
-High-gene-count cells were not removed because elevated complexity alone cannot distinguish true biological cells from doublets.
+High-gene-count cells were intentionally retained because elevated transcript complexity alone is insufficient evidence of doublets. Dedicated doublet-detection methods should be used instead.
 
 ### Filtering Outcome
 
-Original cells:
-
-- **2,700**
-
-Remaining cells:
-
-- **2,633**
-
-Removed cells:
-
-- **67**
-
-Percentage removed:
-
-- **2.48%**
+| Metric | Value |
+|--------|------:|
+| Original cells | 2,700 |
+| Remaining cells | 2,633 |
+| Removed cells | 67 |
+| Percentage removed | 2.48% |
 
 ### Conclusion
 
-Only a small proportion of cells required removal, indicating that PBMC3K was already a high-quality dataset.
+Only a small proportion of cells required removal, indicating that PBMC3K is a high-quality dataset.
 
 ---
 
@@ -300,75 +292,299 @@ Genes were retained only if detected in **three or more cells**.
 
 Gene filtering was treated strictly as technical quality control.
 
-Genes observed in only one or two cells provide insufficient observations for reliable downstream analysis and substantially increase matrix sparsity.
+Genes observed in only one or two cells provide insufficient observations for reliable downstream statistical analysis while substantially increasing matrix sparsity.
 
 This filtering step **does not imply biological irrelevance**.
 
-Predictive importance will instead be determined later through:
+Biological importance will instead be determined later using:
 
 - Highly variable gene selection
 - Machine-learning models
-- SHAP interpretation
+- SHAP feature attribution
 
 ### Filtering Outcome
 
-Genes before filtering:
-
-- **32,738**
-
-Genes after filtering:
-
-- **13,692**
-
-Genes removed:
-
-- **19,046**
-
-Percentage removed:
-
-- **58.18%**
+| Metric | Value |
+|--------|------:|
+| Original genes | 32,738 |
+| Remaining genes | 13,692 |
+| Removed genes | 19,046 |
+| Percentage removed | 58.18% |
 
 ### Conclusion
 
-Despite removing over half of the original genes, the filtered dataset retains more than 13,000 genes, providing ample information for downstream preprocessing and classification.
+Although more than half of the genes were removed, over 13,000 genes remained, preserving substantial biological information while reducing technical noise.
 
 ---
 
-## Phase 2 Progress
+## 2.7 Library-Size Normalization
 
-### Completed
+### Objective
 
-- Preprocessing audit
-- Raw dataset inspection
-- Quality-control metric calculation
-- QC visualization
-- Cell filtering
-- Gene filtering
+Correct for differences in sequencing depth between individual cells.
 
-### Remaining
+### Method
 
-- Normalize counts
-- Log transformation
-- Highly variable gene selection
-- Scaling
-- PCA
-- Machine-learning feature preparation
+Counts were normalized using Scanpy's total-count normalization with a target library size of **10,000 counts per cell**.
 
-## Current Status
+### Rationale
 
-Phase 2 is approximately **45% complete**.
+Observed differences in total counts largely reflect sequencing depth rather than biological variation.
 
-The quality-control stage is complete.
+Normalization places all cells on a common scale, allowing biologically meaningful comparisons of gene expression.
 
-The next session will begin with normalization and log transformation.
+Raw filtered counts were preserved in:
+
+```python
+adata.layers["counts"]
+```
+
+before normalization.
+
+### Verification
+
+Median total counts after normalization:
+
+- **10,000 counts per cell**
+
+### Conclusion
+
+Sequencing-depth differences were successfully removed while preserving filtered raw counts for future analyses.
+
+---
+
+## 2.8 Log Transformation
+
+### Objective
+
+Reduce the extreme right-skew of count data and stabilize variance.
+
+### Method
+
+Applied the natural logarithm transformation:
+
+```
+log(1 + x)
+```
+
+using:
+
+```python
+sc.pp.log1p()
+```
+
+### Rationale
+
+scRNA-seq count data are highly skewed because a small number of genes are expressed at very high levels.
+
+Log transformation compresses extreme expression values while preserving relative biological differences.
+
+### Verification
+
+Observed expression values ranged approximately from:
+
+- Minimum: **0**
+- Maximum: **7.47**
+
+which is consistent with expected log-transformed expression values.
+
+### Conclusion
+
+Expression values were successfully transformed into a scale appropriate for downstream statistical analyses.
+
+---
+
+## 2.9 Highly Variable Gene Selection
+
+### Objective
+
+Reduce feature dimensionality while retaining genes that capture the greatest biological variation.
+
+### Method
+
+Highly variable genes were identified using the **Seurat** method implemented in Scanpy.
+
+Parameters:
+
+- Top genes: **2,000**
+- `subset=False`
+
+### Results
+
+Selected highly variable genes:
+
+- **2,000**
+
+Representative highly variable genes included:
+
+- ISG15
+- TNFRSF4
+- CPSF3L
+- ATAD3C
+- RER1
+
+### Rationale
+
+Highly variable genes capture biological heterogeneity more effectively than uniformly expressed genes.
+
+Feature selection at this stage reduces computational complexity while preserving information relevant for downstream clustering and supervised learning.
+
+Importantly, this step represents statistical feature selection rather than biological interpretation.
+
+### Conclusion
+
+The feature space was reduced from **13,692 genes** to **2,000 highly informative genes** for downstream analyses.
+
+---
+
+## 2.10 Feature Scaling
+
+### Objective
+
+Standardize gene expression values prior to principal component analysis.
+
+### Method
+
+Expression values were centered and scaled to unit variance using:
+
+```python
+sc.pp.scale(max_value=10)
+```
+
+Values exceeding ±10 standard deviations were clipped.
+
+### Verification
+
+- Matrix converted from sparse to dense.
+- Mean ≈ 0
+- Standard deviation ≈ 0.91
+- Minimum = -10
+- Maximum = 10
+
+The slight reduction in standard deviation reflects clipping of extreme values.
+
+### Rationale
+
+Scaling ensures that highly expressed genes do not dominate PCA solely because of their magnitude.
+
+### Conclusion
+
+The dataset was successfully standardized for dimensionality reduction.
+
+---
+
+## 2.11 Principal Component Analysis
+
+### Objective
+
+Summarize the major sources of variation within the highly variable genes.
+
+### Method
+
+Principal component analysis was performed using the ARPACK SVD solver.
+
+### Results
+
+Generated:
+
+- 50 principal components
+- PCA embedding for all 2,633 cells
+- Principal-component loading vectors for all 2,000 highly variable genes
+
+The variance-ratio plot showed:
+
+- PC1 explains the largest proportion of variance.
+- Variance decreases rapidly across the first several principal components.
+- An elbow appears approximately between PCs 8 and 10.
+- Later components contribute progressively smaller amounts of variation.
+
+### Rationale
+
+PCA provides a compact representation of the dominant variation within the dataset and serves as the foundation for downstream visualization and neighborhood graph construction.
+
+For this project, PCA is treated primarily as an exploratory analysis rather than the feature representation used for supervised classification.
+
+### Conclusion
+
+Principal component analysis successfully captured the major structure of the PBMC dataset while preserving gene-level features for future machine-learning models.
+
+---
+
+## 2.12 Processed Dataset
+
+### Saved Outputs
+
+The fully processed dataset was saved as:
+
+```
+data/processed/pbmc3k_preprocessed.h5ad
+```
+
+The saved object contains:
+
+- 2,633 cells
+- 2,000 highly variable genes
+- Raw normalized expression matrix (`.raw`)
+- Preserved filtered counts layer (`layers["counts"]`)
+- PCA embeddings
+- PCA loading vectors
+
+The dataset was successfully reloaded to verify reproducibility.
+
+---
+
+## Phase 2 Decisions
+
+- Preserve filtered raw counts before normalization.
+- Preserve normalized full-gene expression in `.raw`.
+- Select 2,000 highly variable genes using the Seurat method.
+- Scale only the highly variable genes.
+- Perform PCA for exploratory analysis and downstream visualization.
+- Reserve gene-level expression matrices—not principal components—for final supervised machine-learning models to maximize biological interpretability.
+
+---
+
+## Phase 2 Summary
+
+A complete preprocessing workflow was successfully developed for raw PBMC3K scRNA-seq data.
+
+The workflow:
+
+- Filters low-quality cells.
+- Removes extremely sparse genes.
+- Corrects sequencing-depth effects.
+- Stabilizes expression variance.
+- Identifies biologically informative genes.
+- Standardizes expression values.
+- Computes principal components.
+- Produces a reproducible analysis-ready dataset suitable for downstream exploratory analysis and machine-learning experiments.
+
+## Status
+
+**Complete**
+
+---
+
+# Next Phase
+
+## Phase 3 — Cell-Type Annotation and Dataset Preparation
+
+### Planned Objectives
+
+- Explore PCA structure.
+- Construct neighborhood graphs.
+- Generate UMAP visualizations.
+- Perform clustering.
+- Establish cell-type labels.
+- Prepare machine-learning training datasets.
 
 ---
 
 ## Notes for the Final Paper
 
-The Methods section should justify preprocessing decisions using both:
+The preprocessing methodology should be justified using both:
 
-- Published scRNA-seq preprocessing literature.
-- Empirical evidence observed within the PBMC3K dataset.
+- Established scRNA-seq preprocessing literature.
+- Empirical observations from the PBMC3K dataset.
 
-This combination provides stronger methodological support than relying solely on conventional tutorial thresholds.
+This combination provides stronger methodological support than relying solely on conventional preprocessing defaults.
