@@ -195,47 +195,161 @@ canonical_markers = {
         "evidence": "Single-cell sequencing with experimental confirmation where available"
     },
 
-    "Dendritic_cells": {
-        "core_markers": [],
-        "supporting_markers": [],
+     "Dendritic_cells": {
+        "core_markers": [
+            "FCER1A",
+            "CD1C",
+            "CLEC10A",
+            "CST3"
+        ],
+        "supporting_markers": [
+            "CD74",
+            "HLA-DRA",
+            "HLA-DPA1",
+            "HLA-DPB1"
+        ],
         "source": "CellMarker 3.0",
-        "notes": "Human, Blood, Peripheral blood, Normal",
+        "notes": (
+            "Human, Blood, Peripheral blood, Normal. "
+            "Starter conventional dendritic-cell panel; verify each marker "
+            "against the exact CellMarker 3.0 results."
+        ),
         "accessed": "2026-08-01",
-        "evidence": "Single-cell sequencing with experimental confirmation where available"
+        "evidence": (
+            "Single-cell sequencing with experimental confirmation "
+            "where available"
+        )
     },
 
     "Plasmacytoid_Dendritic_cells": {
-        "core_markers": [],
-        "supporting_markers": [],
+        "core_markers": [
+            "CLEC4C",
+            "GZMB",
+            "JCHAIN",
+            "IL3RA",
+            "TCF4"
+        ],
+        "supporting_markers": [
+            "IRF7",
+            "SERPINF1",
+            "IGJ",
+            "HLA-DRA"
+        ],
         "source": "CellMarker 3.0",
-        "notes": "Human, Blood, Peripheral blood, Normal"
+        "notes": (
+            "Human, Blood, Peripheral blood, Normal. "
+            "Starter plasmacytoid dendritic-cell panel; verify each marker "
+            "against the exact CellMarker 3.0 results."
+        ),
+        "accessed": "2026-08-01",
+        "evidence": (
+            "Single-cell sequencing with experimental confirmation "
+            "where available"
+        )
     },
 
     "Platelets": {
-        "core_markers": [],
-        "supporting_markers": [],
+        "core_markers": [
+            "PPBP",
+            "PF4",
+            "GNG11",
+            "RGS18"
+        ],
+        "supporting_markers": [
+            "NRGN",
+            "GP9",
+            "ITGA2B",
+            "TUBB1"
+        ],
         "source": "CellMarker 3.0",
-        "notes": "Human, Blood, Peripheral blood, Normal"
+        "notes": (
+            "Human, Blood, Peripheral blood, Normal. "
+            "Starter platelet panel; verify each marker against the exact "
+            "CellMarker 3.0 results."
+        ),
+        "accessed": "2026-08-01",
+        "evidence": (
+            "Single-cell sequencing with experimental confirmation "
+            "where available"
+        )
     },
 
     "Megakaryocytes": {
-        "core_markers": [],
-        "supporting_markers": [],
+        "core_markers": [
+            "ITGA2B",
+            "GP9",
+            "TUBB1",
+            "PF4"
+        ],
+        "supporting_markers": [
+            "PPBP",
+            "GNG11",
+            "RGS18",
+            "NFE2"
+        ],
         "source": "CellMarker 3.0",
-        "notes": "Human, Blood, Peripheral blood, Normal"
+        "notes": (
+            "Human, Blood, Normal. Starter megakaryocyte panel. "
+            "Platelets and megakaryocytes share many markers, so a broad "
+            "Platelet_Megakaryocyte label may be safer in PBMC data."
+        ),
+        "accessed": "2026-08-01",
+        "evidence": (
+            "Single-cell sequencing with experimental confirmation "
+            "where available"
+        )
     },
 
     "Hematopoietic_Stem_Progenitor_Cells": {
-        "core_markers": [],
-        "supporting_markers": [],
+        "core_markers": [
+            "CD34",
+            "KIT",
+            "GATA2",
+            "FLT3"
+        ],
+        "supporting_markers": [
+            "SOX4",
+            "MEIS1",
+            "HOPX",
+            "PROM1"
+        ],
         "source": "CellMarker 3.0",
-        "notes": "Human, Blood, Peripheral blood, Normal"
+        "notes": (
+            "Human, Blood, Normal. Starter hematopoietic stem/progenitor "
+            "cell panel; verify each marker against the exact CellMarker "
+            "3.0 results. This population is unlikely to be abundant in "
+            "ordinary PBMC3K data."
+        ),
+        "accessed": "2026-08-01",
+        "evidence": (
+            "Single-cell sequencing with experimental confirmation "
+            "where available"
+        )
     },
 
     "Erythrocytes": {
-        "core_markers": [],
-        "supporting_markers": [],
+        "core_markers": [
+            "HBB",
+            "HBA1",
+            "HBA2",
+            "ALAS2"
+        ],
+        "supporting_markers": [
+            "AHSP",
+            "GYPA",
+            "CA1",
+            "KLF1"
+        ],
         "source": "CellMarker 3.0",
-        "notes": "Human, Blood, Peripheral blood, Normal"
+        "notes": (
+            "Human, Blood, Normal. Starter erythroid panel; verify each "
+            "marker against the exact CellMarker 3.0 results. Erythroid "
+            "signals in a PBMC preparation may indicate contamination."
+        ),
+        "accessed": "2026-08-01",
+        "evidence": (
+            "Single-cell sequencing with experimental confirmation "
+            "where available"
+        )
     }
 }
