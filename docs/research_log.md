@@ -578,6 +578,28 @@ The workflow:
 - Establish cell-type labels.
 - Prepare machine-learning training datasets.
 
+cluster 0 was supported as CD4-like T cells; cluster 2 was particularly important because the automated score favored FCGR3A monocytes, but the expression-validation plot supported CD14 monocytes; cluster 3 was labeled platelets based on the strong PPBP/PF4 signature.
+
+## Final Cell-Type Annotations
+
+Leiden clusters were annotated using a combination of:
+
+- cluster-specific differential expression,
+- comparison against canonical PBMC markers from CellMarker 3.0,
+- normalized marker-overlap scoring,
+- and validation using marker-expression dot plots.
+
+Final annotations:
+
+- Cluster 0 — CD4 T cells
+- Cluster 1 — B cells
+- Cluster 2 — CD14 Monocytes
+- Cluster 3 — Platelets
+- Cluster 4 — NK cells
+- Cluster 5 — Dendritic cells
+
+The marker-overlap scoring system was used as a candidate annotation method rather than as an automatic ground-truth classifier. Expression-level validation was used to resolve ambiguous cases, particularly the distinction between CD14 and FCGR3A monocytes.
+
 ---
 
 ## Notes for the Final Paper
