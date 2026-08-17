@@ -565,8 +565,6 @@ The workflow:
 
 ---
 
-# Next Phase
-
 ## Phase 3 — Cell-Type Annotation and Dataset Preparation
 
 ### Planned Objectives
@@ -601,6 +599,22 @@ Final annotations:
 The marker-overlap scoring system was used as a candidate annotation method rather than as an automatic ground-truth classifier. Expression-level validation was used to resolve ambiguous cases, particularly the distinction between CD14 and FCGR3A monocytes.
 
 ---
+
+## Phase 4 - Model Training
+Model: Logistic Regression
+Features: 2,000 HVGs
+Training cells: 2,106
+Held-out cells: 527
+Classes: 6
+Accuracy: 98.48%
+Macro F1: 98.9%
+Weighted F1: 98.5%
+
+Logistic regression and XGBoost both achieved high classification performance on the PBMC3K held-out test set. Logistic regression performed slightly better overall, achieving 98.5% accuracy compared with 97.9% for XGBoost. Most errors from both models involved confusion between CD4 T cells and NK cells. Performance estimates for dendritic cells and especially platelets should be interpreted cautiously because these classes contained very few test samples.
+
+The cross-validation results show that logistic regression performs consistently well across different subsets of the training data. The model averaged about 98% accuracy, suggesting that its strong performance was not caused by one lucky train/test split. Performance varied more for the rare cell types, which is expected because there are very few examples of those cells.
+
+Original logistic regression had 98.48% accuracy and 0.989 macro F1. After tuning regularization to C=0.01, reached 98.67% accuracy and 0.990 macro F1. Small test-set improvement, the tuning was selected using cross-validation rather than the test set.
 
 ## Notes for the Final Paper
 
