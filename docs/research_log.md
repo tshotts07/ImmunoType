@@ -614,7 +614,7 @@ Logistic regression and XGBoost both achieved high classification performance on
 
 The cross-validation results show that logistic regression performs consistently well across different subsets of the training data. The model averaged about 98% accuracy, suggesting that its strong performance was not caused by one lucky train/test split. Performance varied more for the rare cell types, which is expected because there are very few examples of those cells.
 
-Original logistic regression had 98.48% accuracy and 0.989 macro F1. After tuning regularization to C=0.01, reached 98.67% accuracy and 0.990 macro F1. Small test-set improvement, the tuning was selected using cross-validation rather than the test set.
+Original logistic regression had 98.48% accuracy and 0.989 macro F1. After tuning regularization to C=0.01, reached 98.67% accuracy and 0.990 macro F1. Small test-set improvement,g the tuning was selected using cross-validation rather than the test set.
 
 ## Notes for the Final Paper
 
