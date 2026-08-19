@@ -464,6 +464,27 @@ python -c "import xgboost; print(xgboost.__version__)"
 
 ---
 
+## PyTorch Hangs on First Tensor Op (macOS)
+
+Symptom: a cell doing its first `torch.tensor(...)` (or any first PyTorch op) hangs indefinitely with no error and near-zero CPU usage, if it runs after scikit-learn/XGBoost steps that used `n_jobs=-1` (e.g. `cross_validate`, `GridSearchCV`, `RandomForestClassifier`) earlier in the same kernel session.
+
+Cause: PyTorch's CPU thread pool initializes lazily on first use. If that first use happens after joblib's process-based backend has already forked worker processes for an `n_jobs=-1` call, thread-pool initialization can deadlock instead of erroring.
+
+`KMP_DUPLICATE_LIB_OK=TRUE` (the usual fix for duplicate-OpenMP-runtime conflicts) does **not** resolve this — it is a different failure mode.
+
+Fix: force PyTorch's thread pool to initialize immediately after import, before any `n_jobs=-1` scikit-learn/XGBoost call runs:
+
+```python
+import torch
+torch.set_num_threads(1)
+_ = torch.zeros(1) + torch.zeros(1)  # forces thread-pool init while the process is still single-threaded
+```
+
+Put this at the top of the notebook, immediately after `import torch`, ahead of any `n_jobs=-1` fits or CV calls.
+
+
+---
+
 # Development Notes
 
 Keep this file limited to:

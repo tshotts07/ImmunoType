@@ -616,6 +616,35 @@ The cross-validation results show that logistic regression performs consistently
 
 Original logistic regression had 98.48% accuracy and 0.989 macro F1. After tuning regularization to C=0.01, reached 98.67% accuracy and 0.990 macro F1. Small test-set improvement,g the tuning was selected using cross-validation rather than the test set.
 
+## PyTorch Environment Issue (Neural Network Setup)
+
+While preparing tensors and DataLoaders for the PyTorch feedforward neural-network baseline, the kernel hung indefinitely on the first `torch.tensor()` call. No error or traceback was produced; the kernel process showed near-zero CPU activity.
+
+The hang occurred specifically when this was the first PyTorch operation executed after the Logistic Regression, XGBoost, and Random Forest fits and their `n_jobs=-1` cross-validation/grid-search steps had already run earlier in the same session.
+
+### Diagnosis
+
+Checkpoint print statements isolated the hang to the tensor-conversion line itself rather than to the surrounding data (array shapes and dtypes were confirmed correct beforehand). `KMP_DUPLICATE_LIB_OK=TRUE`, the standard fix for duplicate-OpenMP-runtime conflicts, was tried first and did not resolve it, ruling that out as the cause.
+
+The remaining explanation: PyTorch's CPU thread pool initializes lazily on first use. scikit-learn/XGBoost's `n_jobs=-1` calls use joblib's process-based backend, which forks worker processes. Initializing PyTorch's thread pool for the first time *after* that forking had already happened deadlocked instead of erroring.
+
+### Fix
+
+Added, immediately after `import torch` and before any `n_jobs=-1` fit or CV call:
+
+```python
+torch.set_num_threads(1)
+_ = torch.zeros(1) + torch.zeros(1)  # forces thread-pool init while the process is still single-threaded
+```
+
+This forces PyTorch's thread pool to initialize while the process is still single-threaded, before joblib forks any workers.
+
+### Verification
+
+After the fix and a full kernel restart, tensor/dataset/DataLoader construction (1,684 training cells, 422 validation cells, batch size 64) completed immediately: 27 training batches, 7 validation batches, matching the expected split sizes exactly.
+
+See `docs/developer_guide.md` (Troubleshooting → "PyTorch Hangs on First Tensor Op (macOS)") for the reusable fix.
+
 ## Notes for the Final Paper
 
 The preprocessing methodology should be justified using both:

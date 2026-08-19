@@ -178,6 +178,34 @@ Allows development flexibility while preserving reproducibility.
 
 ---
 
+# 2026-08-19
+
+## PyTorch Kernel Hang During Neural Network Setup
+
+### Discussion
+
+While setting up tensors and DataLoaders for the PyTorch feedforward neural-network baseline (Phase 4), the kernel hung indefinitely on the first `torch.tensor()` call, with no error and near-zero CPU usage. The hang only occurred when this was the first PyTorch operation run after the Logistic Regression, XGBoost, and Random Forest fits and their `n_jobs=-1` cross-validation/grid-search steps had already executed earlier in the same session.
+
+Checkpoint prints isolated the hang to the tensor-conversion call itself, not the input data. `KMP_DUPLICATE_LIB_OK=TRUE` (the standard fix for duplicate-OpenMP-runtime conflicts) was tried and did not help, ruling that out. The remaining explanation: PyTorch's CPU thread pool initializes lazily on first use, and initializing it after joblib's `n_jobs=-1` calls had already forked worker processes caused a deadlock rather than an error.
+
+### Decision
+
+Initialize PyTorch's thread pool immediately after `import torch`, before any `n_jobs=-1` scikit-learn/XGBoost call runs:
+
+```python
+torch.set_num_threads(1)
+_ = torch.zeros(1) + torch.zeros(1)
+```
+
+This was added to the top of `notebooks/05_machine_learning.ipynb` and confirmed to fix the hang after a full kernel restart.
+
+### Reason
+
+Keeps the fix documented as a project convention (thread-pool warmup before any parallel scikit-learn/XGBoost step) rather than a one-off workaround, so it isn't rediscovered from scratch if it recurs in later notebooks. Full technical detail is in `docs/research_log.md` (Phase 4) and the reusable fix is in `docs/developer_guide.md` (Troubleshooting).
+
+
+---
+
 # Future Decisions
 
 Document future discussions involving:
