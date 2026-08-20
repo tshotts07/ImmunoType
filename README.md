@@ -27,8 +27,8 @@ contribute most strongly to those predictions.
 
 ## Current Status
 
-**Phases 0-3 are complete. Phase 4 - Supervised Machine Learning - is in
-progress.**
+**Phases 0-4 are complete. Phase 5 - Gene-Level Interpretation - is up
+next.**
 
 ### Completed
 
@@ -45,11 +45,10 @@ progress.**
 -   Five-fold stratified cross-validation for all three baseline models
 -   Logistic Regression hyperparameter tuning with training-only
     GridSearchCV
-
-### In Progress
-
--   PyTorch feedforward neural-network baseline
--   Four-model comparison
+-   PyTorch feedforward neural-network baseline (class-weighted loss,
+    early stopping on validation macro F1)
+-   Four-model comparison (Logistic Regression, XGBoost, Random Forest,
+    PyTorch NN) on the held-out test set
 
 ### Planned
 
@@ -89,7 +88,7 @@ progress.**
                                                         scoring, validation,
                                                         and final labels.
 
-  4                 Supervised        In progress       Compare Logistic
+  4                 Supervised        Complete          Compare Logistic
                     Machine Learning                    Regression, Random
                                                         Forest, XGBoost, and
                                                         PyTorch on a common
@@ -157,6 +156,7 @@ held-out test cells**.
   Model                   Accuracy   Macro F1   Weighted F1
   --------------------- ---------- ---------- -------------
   Logistic Regression       0.9848     0.9888        0.9848
+  PyTorch Feedforward NN    0.9791     0.9849        0.9791
   XGBoost                   0.9791     0.9205        0.9788
   Random Forest             0.9753     0.8964        0.9745
 
@@ -179,20 +179,55 @@ training-only cross-validation.
 -   **Final held-out macro F1:** `0.9902`
 -   **Final held-out weighted F1:** `0.9867`
 
-Logistic Regression is currently the strongest model, but the planned
-model comparison is not complete until the PyTorch neural-network
-baseline is evaluated.
+Logistic Regression is the strongest model overall, with the PyTorch
+neural network as the closest competitor — see below for the completed
+four-model comparison.
 
 ## Neural-Network Work
 
-The original training portion has been split into:
+The original training portion was split into:
 
 -   **NN training:** 1,684 cells x 2,000 genes
 -   **Validation:** 422 cells x 2,000 genes
 -   **Held-out test:** 527 cells x 2,000 genes
 
-The held-out test set should remain untouched while neural-network
-architecture/training decisions are made.
+### Architecture
+
+A feedforward network was trained on the same 2,000-HVG standardized
+feature space used by the other three models:
+
+-   **Input:** 2,000 features
+-   **Hidden layers:** 2,000 → 256 → 64, each with BatchNorm, ReLU, and
+    dropout (p=0.4)
+-   **Output:** 6 classes (`CrossEntropyLoss`, i.e. softmax)
+-   **Optimizer:** Adam, lr=1e-3, weight_decay=1e-4
+-   **Loss weighting:** inverse class frequency
+    (`compute_class_weight("balanced")`), matching the
+    `class_weight="balanced"` setting used for Logistic Regression and
+    Random Forest — required given the severe class imbalance (7
+    Platelets and 34 Dendritic cells in the training set)
+-   **Batch size:** 64
+-   **Random seed:** 42
+
+Architecture and training decisions used only the training/validation
+split; the 527-cell held-out test set was evaluated once, at the end.
+
+### Results
+
+Early stopping on validation macro F1 (patience=15, max 100 epochs)
+stopped training at **epoch 29**, restoring the best-epoch weights.
+
+-   **Best validation macro F1:** 0.995
+-   **Held-out test accuracy:** 97.91%
+-   **Held-out test macro F1:** 0.985
+-   **Held-out test weighted F1:** 0.979
+
+The class-weighted PyTorch NN outperformed XGBoost and Random Forest on
+macro F1 — the metric most sensitive to the rare classes — suggesting its
+weighted loss handled class imbalance more effectively than the
+tree-based models' class weighting on this small, high-dimensional,
+imbalanced dataset. Full per-class metrics and the training/validation
+curves are in `docs/research_log.md`.
 
 ## Canonical Marker Annotation
 
@@ -278,7 +313,8 @@ The project aims to record:
 
 ## Current Next Step
 
-Complete the **PyTorch feedforward neural-network baseline**, using the
-existing training/validation split for model decisions and reserving the
-527-cell test set for final evaluation. Then update the model comparison
-before beginning gene-level interpretation.
+Begin **Phase 5 — Gene-Level Interpretation**: identify which genes drive
+model predictions using Logistic Regression coefficients, tree-based
+feature importance (XGBoost/Random Forest), and SHAP attribution, then
+compare those signals against the canonical PBMC marker panels used for
+cluster annotation.

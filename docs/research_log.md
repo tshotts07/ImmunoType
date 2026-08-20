@@ -645,6 +645,80 @@ After the fix and a full kernel restart, tensor/dataset/DataLoader construction 
 
 See `docs/developer_guide.md` (Troubleshooting → "PyTorch Hangs on First Tensor Op (macOS)") for the reusable fix.
 
+## PyTorch Feedforward Neural Network
+
+### Architecture
+
+A feedforward network was trained on the same 2,000-HVG feature space (standardized) used by the other three models:
+
+- Input: 2,000 features
+- Hidden layers: 2,000 → 256 → 64, each with BatchNorm, ReLU, and dropout (p=0.4)
+- Output: 6 classes (softmax via `CrossEntropyLoss`)
+- Optimizer: Adam, lr=1e-3, weight_decay=1e-4
+- Loss: `CrossEntropyLoss` weighted by inverse class frequency (`compute_class_weight("balanced")`), matching the `class_weight="balanced"` setting used for Logistic Regression and Random Forest — needed given the extreme class imbalance (Platelets: 7 training cells; Dendritic cells: 34)
+- Batch size: 64
+- Random seed: 42 (`torch.manual_seed(42)`)
+
+### Training/Validation Split
+
+Following the reproducibility requirement that NN architecture and training decisions use only the train/validation split, not the held-out test set:
+
+- NN training cells: 1,684
+- Validation cells: 422
+- Both splits were stratified on the encoded label and retained all six classes (minimum 5 Platelets in training, 2 in validation).
+
+### Training
+
+Early stopping on validation macro F1 (patience=15 epochs, max 100 epochs) stopped training at **epoch 29**, restoring the weights from the best epoch.
+
+- Best validation macro F1: 0.995
+- Validation accuracy at best epoch: 0.993
+
+Validation-set classification report (used only to confirm the architecture, not as a final result):
+
+| Class | Precision | Recall | F1 | Support |
+|---|---:|---:|---:|---:|
+| B cells | 1.000 | 1.000 | 1.000 | 55 |
+| CD14 Monocytes | 1.000 | 1.000 | 1.000 | 102 |
+| CD4 T cells | 0.995 | 0.989 | 0.992 | 188 |
+| Dendritic cells | 1.000 | 1.000 | 1.000 | 7 |
+| NK cells | 0.971 | 0.985 | 0.978 | 68 |
+| Platelets | 1.000 | 1.000 | 1.000 | 2 |
+
+### Held-Out Test Set Result (Final, One-Time Evaluation)
+
+| Metric | Value |
+|---|---:|
+| Accuracy | 97.91% |
+| Macro F1 | 0.985 |
+| Weighted F1 | 0.979 |
+
+Per-class performance on the 527-cell held-out test set:
+
+| Class | Precision | Recall | F1 | Support |
+|---|---:|---:|---:|---:|
+| B cells | 0.971 | 1.000 | 0.986 | 68 |
+| CD14 Monocytes | 1.000 | 1.000 | 1.000 | 128 |
+| CD4 T cells | 0.983 | 0.970 | 0.976 | 235 |
+| Dendritic cells | 1.000 | 1.000 | 1.000 | 9 |
+| NK cells | 0.942 | 0.953 | 0.947 | 85 |
+| Platelets | 1.000 | 1.000 | 1.000 | 2 |
+
+### Four-Model Comparison (Held-Out Test Set)
+
+| Model | Accuracy | Macro F1 | Weighted F1 |
+|---|---:|---:|---:|
+| Logistic Regression | 98.48% | 0.989 | 0.985 |
+| PyTorch Feedforward NN | 97.91% | 0.985 | 0.979 |
+| XGBoost | 97.91% | 0.921 | 0.979 |
+| Random Forest | 97.53% | 0.896 | 0.975 |
+
+Logistic Regression remains the strongest model overall, but the class-weighted PyTorch NN was the closest competitor and clearly outperformed XGBoost and Random Forest on macro F1 — the metric most sensitive to the rare classes (Dendritic cells, Platelets). This suggests the NN's weighted loss handled class imbalance more effectively than XGBoost/Random Forest's tree-based class weighting on this small, high-dimensional (2,000-feature), imbalanced dataset. As with the other models, Dendritic cells and Platelets have very few test-set examples (9 and 2, respectively), so their per-class metrics should be interpreted cautiously.
+
+### Conclusion
+
+Phase 4 is complete: all four models (Logistic Regression, XGBoost, Random Forest, PyTorch feedforward NN) have been trained, cross-validated where applicable, and evaluated once on the same held-out test set. Logistic Regression is the leading model on this feature space and dataset size, with the NN as a strong second. Next steps move to Phase 5 (gene-level interpretation via coefficients/feature importance and SHAP).
+
 ## Notes for the Final Paper
 
 The preprocessing methodology should be justified using both:
