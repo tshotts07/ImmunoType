@@ -754,6 +754,49 @@ Four of six classes are dominated by canonical markers already used in Phase 3 a
 
 Logistic Regression coefficients largely recover the canonical PBMC marker panel used for Phase 3 annotation, providing independent evidence that the model is learning biologically meaningful signal rather than dataset artifacts. The Dendritic cell and CD4 T cell signatures are less clean, plausibly reflecting real subpopulation heterogeneity within those Phase 3 clusters rather than a model or annotation error. Next: Random Forest/XGBoost feature importance, for comparison against these coefficient-based results.
 
+### Random Forest / XGBoost Feature Importance
+
+#### Method
+
+Global feature importance (`feature_importances_`) was extracted from the saved Random Forest and XGBoost models (`06_gene_interpretation.ipynb`, loaded from `models/`). Unlike the Logistic Regression coefficients, tree-based importance is a single score per gene reflecting overall usefulness for splitting decisions across the whole ensemble — it is not broken down by cell type. Top 20 genes by importance were extracted for each model.
+
+#### Top Genes by Importance
+
+| Random Forest | XGBoost |
+|---|---|
+| NKG7 | CD79A |
+| HLA-DRB1 | FTL |
+| FTL | HLA-DRA |
+| CD79A | SERPINF1 |
+| CD74 | NKG7 |
+| HLA-DRA | HLA-DRB1 |
+| HLA-DPB1 | CST3 |
+| FTH1 | CLEC10A |
+| GPX1 | CST7 |
+| HLA-DPA1 | KIAA0101 |
+
+Full top-20 lists for both models are in `06_gene_interpretation.ipynb`.
+
+#### Cross-Model Consistency
+
+CD79A and NKG7 rank at or near the top in all three interpretation methods tried so far (Logistic Regression coefficients, Random Forest importance, XGBoost importance) — three structurally different algorithms (linear, bagged trees, boosted trees) independently converging on the same two genes as maximally decisive. Treated as strong evidence these two genes are genuinely central to distinguishing B cells and NK cells respectively, not an artifact of any one model.
+
+#### Dendritic Cell Proliferation Signature — Reinforced
+
+The proliferation-gene signature flagged in the Logistic Regression DC coefficients (BIRC5, TOP2A, ZWINT, KIAA0101) reappears independently in XGBoost's global importance list (KIAA0101, ZWINT, STMN1, SMC2, CKS1B), alongside genuine DC markers (SERPINF1, CLEC10A, FCER1A, ENHO). Two structurally unrelated models surfacing the same proliferation signature tied to the same 43-cell cluster raises this from a single-model coincidence to a candidate real finding. Not resolved here — flagged as follow-up work (e.g., checking MKI67/proliferation-marker expression specifically within the Dendritic cell cluster) rather than investigated further in this pass.
+
+#### MHC-II Genes in Global Importance
+
+Both models rank several MHC-II genes highly (HLA-DRA, HLA-DRB1, HLA-DPA1, HLA-DPB1, HLA-DQA1, HLA-DQB1, CD74). This reflects the global nature of tree importance: these genes are useful for distinguishing antigen-presenting cells (B cells, monocytes, dendritic cells) from non-APCs (T cells, NK cells, platelets) across many decision splits, rather than being specific to any single cell type the way NKG7 is specific to NK cells. Not a modeling error — expected behavior for a global (non-per-class) importance measure, and worth noting explicitly so it doesn't read as the model being confused.
+
+#### Minor Note
+
+Random Forest's list includes some broadly/ubiquitously expressed genes (MALAT1, OAZ1, GPX1) without clear cell-type-identity meaning — a known tendency of tree importance to reward genes with high, reliable expression variance generally, not just biologically specific markers.
+
+#### Conclusion
+
+Global feature importance from both tree-based models is broadly consistent with the Logistic Regression coefficient results and with each other, particularly for CD79A and NKG7. The Dendritic cell proliferation signal is now a two-model finding rather than a single-model curiosity. Next: SHAP analysis, to get per-class attribution from the tree models (and the NN) comparable to what Logistic Regression coefficients already provide directly.
+
 ## Notes for the Final Paper
 
 The preprocessing methodology should be justified using both:

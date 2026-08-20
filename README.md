@@ -51,10 +51,11 @@ progress.**
     PyTorch NN) on the held-out test set
 -   Logistic Regression coefficient-based gene ranking per cell type,
     compared against the CellMarker 3.0 reference
+-   Random Forest/XGBoost global feature-importance-based gene ranking,
+    cross-checked against the Logistic Regression coefficients
 
 ### In Progress
 
--   Random Forest/XGBoost feature-importance-based gene ranking
 -   SHAP analysis
 
 ### Planned
@@ -319,7 +320,10 @@ The project aims to record:
 ## Current Next Step
 
 Continue **Phase 5 — Gene-Level Interpretation**: Logistic Regression
-coefficient-based gene rankings are complete and largely recover the
-canonical PBMC marker panel (see `docs/research_log.md`). Next, extract
-Random Forest/XGBoost feature importance and SHAP attributions for
-comparison against the coefficient-based results.
+coefficients and Random Forest/XGBoost feature importance are complete —
+all three converge on CD79A and NKG7 as top predictive genes, and two
+independent models flag a proliferation-gene signature within the
+Dendritic cell cluster worth following up on (see
+`docs/research_log.md`). Next, run SHAP to get per-class attribution from
+the tree models and the NN, comparable to what the Logistic Regression
+coefficients already provide directly.
