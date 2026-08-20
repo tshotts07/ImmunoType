@@ -27,8 +27,8 @@ contribute most strongly to those predictions.
 
 ## Current Status
 
-**Phases 0-4 are complete. Phase 5 - Gene-Level Interpretation - is up
-next.**
+**Phases 0-4 are complete. Phase 5 - Gene-Level Interpretation - is in
+progress.**
 
 ### Completed
 
@@ -49,11 +49,16 @@ next.**
     early stopping on validation macro F1)
 -   Four-model comparison (Logistic Regression, XGBoost, Random Forest,
     PyTorch NN) on the held-out test set
+-   Logistic Regression coefficient-based gene ranking per cell type,
+    compared against the CellMarker 3.0 reference
+
+### In Progress
+
+-   Random Forest/XGBoost feature-importance-based gene ranking
+-   SHAP analysis
 
 ### Planned
 
--   Gene-level interpretation
--   SHAP analysis
 -   Independent external PBMC validation
 -   Final figures, tables, research synthesis, and manuscript-ready
     documentation
@@ -94,7 +99,7 @@ next.**
                                                         PyTorch on a common
                                                         PBMC3K feature space.
 
-  5                 Gene-Level        Planned           Interpret
+  5                 Gene-Level        In progress       Interpret
                     Interpretation                      coefficients/feature
                                                         importance and use
                                                         SHAP to identify
@@ -313,8 +318,8 @@ The project aims to record:
 
 ## Current Next Step
 
-Begin **Phase 5 — Gene-Level Interpretation**: identify which genes drive
-model predictions using Logistic Regression coefficients, tree-based
-feature importance (XGBoost/Random Forest), and SHAP attribution, then
-compare those signals against the canonical PBMC marker panels used for
-cluster annotation.
+Continue **Phase 5 — Gene-Level Interpretation**: Logistic Regression
+coefficient-based gene rankings are complete and largely recover the
+canonical PBMC marker panel (see `docs/research_log.md`). Next, extract
+Random Forest/XGBoost feature importance and SHAP attributions for
+comparison against the coefficient-based results.

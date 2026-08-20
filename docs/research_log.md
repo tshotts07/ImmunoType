@@ -719,6 +719,41 @@ Logistic Regression remains the strongest model overall, but the class-weighted 
 
 Phase 4 is complete: all four models (Logistic Regression, XGBoost, Random Forest, PyTorch feedforward NN) have been trained, cross-validated where applicable, and evaluated once on the same held-out test set. Logistic Regression is the leading model on this feature space and dataset size, with the NN as a strong second. Next steps move to Phase 5 (gene-level interpretation via coefficients/feature importance and SHAP).
 
+## Phase 5 — Gene-Level Interpretation
+
+### Logistic Regression Coefficients
+
+#### Method
+
+The tuned Logistic Regression model (`C=0.01`, from GridSearchCV) was used to extract per-class coefficients via `coef_` (shape: 6 classes x 2,000 HVGs). Because features were standardized (StandardScaler) before fitting, coefficient magnitudes are directly comparable across genes without needing to account for differing expression scales. For each cell type, the 15 genes with the largest positive coefficient (i.e., most strongly pushing predictions toward that class) were extracted.
+
+Models, encoders, and gene names were loaded from `models/` (saved at the end of `05_machine_learning.ipynb`) rather than rerun, in `06_gene_interpretation.ipynb`.
+
+#### Top Genes by Cell Type
+
+| Cell type | Top genes (by coefficient) |
+|---|---|
+| B cells | CD79A, MS4A1, CD79B, HLA-DQA1, HLA-DRA, LINC00926, HLA-DQB1, CD74 |
+| CD14 Monocytes | FTL, LST1, S100A9, FCN1, FTH1, S100A8, AIF1, TYROBP |
+| CD4 T cells | FYB, MAL, LTB, TPT1, IL32, JUNB, TNFRSF4, AQP3 |
+| Dendritic cells | FCER1A, CLEC10A, SERPINF1, ENHO, BIRC5, CD1C, CLEC4C, ZWINT |
+| NK cells | NKG7, GZMK, CCL5, CST7, GZMA, CTSW, KLRG1, LYAR |
+| Platelets | LY6G6F, TREML1, ITGA2B, AP001189.4, GP9, GNG11, SDPR, RP11-879F14.2 |
+
+Full top-15 lists are in `06_gene_interpretation.ipynb`.
+
+#### Comparison Against CellMarker 3.0 Reference
+
+Four of six classes are dominated by canonical markers already used in Phase 3 annotation: B cells (CD79A/CD79B/MS4A1), CD14 Monocytes (S100A8/S100A9/LST1, FCER1G/TYROBP), NK cells (NKG7, granzymes, PRF1, GNLY), and Platelets (ITGA2B, PF4, GP9, GNG11) all recover their expected canonical signatures near the top of the list.
+
+**Dendritic cells:** FCER1A, CLEC10A, and CD1C are genuine conventional-DC markers, but CLEC4C is a plasmacytoid-DC-specific marker, and several other top genes (BIRC5, TOP2A, ZWINT, KIAA0101) are cell-cycle/proliferation markers rather than DC-identity genes. This may indicate the 43-cell Dendritic cells cluster from Phase 3 is a mixed cDC/pDC population that Leiden clustering did not separate, or may be an artifact of the very small training sample (~34 cells) for this class. Flagged as a limitation rather than resolved here.
+
+**CD4 T cells:** the weakest signature of the six — coefficient magnitudes are noticeably smaller than other classes, and canonical CD3D/CD3E do not appear in the top 15 (IL7R and CD2 do). This is consistent with CD4 T cells being the largest and most heterogeneous class (1,175 cells) and with the four-model comparison's confusion matrices, where CD4 T cells were the dominant source of misclassification (confused primarily with NK cells) across all four models.
+
+#### Conclusion
+
+Logistic Regression coefficients largely recover the canonical PBMC marker panel used for Phase 3 annotation, providing independent evidence that the model is learning biologically meaningful signal rather than dataset artifacts. The Dendritic cell and CD4 T cell signatures are less clean, plausibly reflecting real subpopulation heterogeneity within those Phase 3 clusters rather than a model or annotation error. Next: Random Forest/XGBoost feature importance, for comparison against these coefficient-based results.
+
 ## Notes for the Final Paper
 
 The preprocessing methodology should be justified using both:
