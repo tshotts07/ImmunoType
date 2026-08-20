@@ -797,6 +797,60 @@ Random Forest's list includes some broadly/ubiquitously expressed genes (MALAT1,
 
 Global feature importance from both tree-based models is broadly consistent with the Logistic Regression coefficient results and with each other, particularly for CD79A and NKG7. The Dendritic cell proliferation signal is now a two-model finding rather than a single-model curiosity. Next: SHAP analysis, to get per-class attribution from the tree models (and the NN) comparable to what Logistic Regression coefficients already provide directly.
 
+### Random Forest SHAP Attribution
+
+#### Method
+
+`shap.TreeExplainer` (shap 0.52.0) was used to compute per-class SHAP values for the Random Forest model, in `06_gene_interpretation.ipynb`. A 300-cell background/foreground sample was drawn from the training set via a stratified `train_test_split` (`stratify=y_train_encoded, random_state=42`), so that the rare classes remained represented in proportion to their true training frequency (Dendritic cells: 5/300, Platelets: 1/300 — directly reflecting how rare these classes are in the full training set: 34 and 7 cells respectively).
+
+This step surfaced three distinct, non-obvious bugs, each documented here so they aren't repeated in the XGBoost/NN SHAP work that follows.
+
+**Bug 1 — flat expected values from a missing background dataset.** The first `TreeExplainer` construction (`shap.TreeExplainer(rf_model)`, no `data=` argument) produced `expected_value` flat at ~0.1667 for all six classes, regardless of true class frequency. Root cause, confirmed by reading the shap source directly: with no background data, `feature_perturbation` defaults to `"tree_path_dependent"`, and `expected_value` is computed from the ensemble's internal root-node values — which are themselves computed under `class_weight="balanced"` (used to fit `rf_model`, matching Logistic Regression and Random Forest elsewhere in Phase 4). Balanced weighting is defined so every class's total weight is equal, so the weighted root-node proportion is exactly 1/6 for a 6-class problem, independent of real class counts. This is unrelated to `model_output`: for `RandomForestClassifier` specifically, `model_output="raw"` and `model_output="probability"` are numerically identical, since sklearn RF's native tree output is already probability-space (confirmed empirically and in source). Fixed by supplying a real background dataset (`data=X_sample`), which switches to `feature_perturbation="interventional"` and computes `expected_value` from actual predictions on that data.
+
+**Bug 2 — silent, non-stratified re-subsampling of the background.** Passing `X_sample` (the stratified 300-cell set) directly as `data=` wraps it in `shap.maskers.Independent` with its *default* `max_samples=100`, which silently re-subsamples down to 100 cells via a plain non-stratified shuffle (`shap.utils.sample`, internally fixed `random_state=0`, independent of the notebook's own seed). Checked directly: this subsampling dropped Platelets from 1/300 to 0/100 and Dendritic cells from 5/300 to 2/100 in the actual background used — silently defeating the entire purpose of stratifying. Fixed by constructing the masker explicitly: `shap.maskers.Independent(X_sample, max_samples=300)`.
+
+**Bug 3 — mean signed SHAP collapses to ~0 when foreground equals background.** After fixing 1 and 2, `expected_value` was correctly calibrated (see Results below), but averaging *signed* SHAP values across all 300 samples (mixed classes) produced per-gene means on the order of 1e-19 — floating-point noise, not signal. Per-sample SHAP additivity was verified to hold correctly (`expected_value + shap_values[i].sum() ≈ predict_proba(X_sample[i])` to ~1e-8), so the underlying computation was not broken — the issue is specific to averaging across the same population used as the background: since interventional SHAP values are deviations from the background's own expected value, and here foreground = background = the same mixed-class 300 cells, the mean deviation from the mean is zero by construction, independent of biology. Fixed by restricting the average to the subset of samples truly labeled as class *K* before averaging signed SHAP values for class *K* — that subset is not representative of the full background, so it does not cancel, and it preserves the same signed "genes pushing toward *K*" interpretation as the Logistic Regression coefficients (rather than switching to mean-|SHAP|, which would conflate genes that push toward a class with genes that push away from it).
+
+#### Verification
+
+Expected value by class vs. true frequency in the 300-cell sample, after fixing bugs 1 and 2:
+
+| Class | Expected value | True frequency |
+|---|---:|---:|
+| B cells | 0.1411 | 0.1300 |
+| CD14 Monocytes | 0.2382 | 0.2433 |
+| CD4 T cells | 0.4072 | 0.4467 |
+| Dendritic cells | 0.0242 | 0.0167 |
+| NK cells | 0.1856 | 0.1600 |
+| Platelets | 0.0037 | 0.0033 |
+
+Tracks true frequencies closely, confirming the fix (previously flat at 0.1667 for every class).
+
+#### Results — Top Genes by True-Label-Restricted Mean SHAP
+
+| Cell type (n) | Top genes |
+|---|---|
+| B cells (n=39) | CD74, HLA-DRA, CD79A, HLA-DRB1, CD79B, HLA-DPB1, HLA-DPA1, HLA-DQA1, MS4A1 |
+| CD14 Monocytes (n=73) | FTL, FTH1, TYROBP, CST3, LYZ, S100A9, LST1, AIF1, S100A8 |
+| CD4 T cells (n=134) | NKG7, HLA-DRB1, HLA-DRA, CD74, HLA-DPB1, FTL, TYROBP, HLA-DPA1, CST3 |
+| Dendritic cells (n=5) | HLA-DPA1, HLA-DQA1, FCER1A, HLA-DRA, CD74, HLA-DRB1, HLA-DPB1, CST3 |
+| NK cells (n=48) | NKG7, CCL5, CST7, GZMA, CTSW, B2M, PRF1, GNLY, GZMK |
+| Platelets (n=1) | TUBB1, GPX1, MPP1, PPBP, SDPR, GNG11, PF4, SPARC, NAP1L1 |
+
+Full top-15 lists are in `06_gene_interpretation.ipynb`. **n is reported explicitly because it varies by two orders of magnitude across classes** (134 down to 1) — Dendritic cells (n=5) and especially Platelets (n=1) should be read as illustrative, not as reliable per-gene rankings; a single cell's SHAP attribution is not an average of anything.
+
+#### Comparison Against Prior Methods
+
+B cells, CD14 Monocytes, and NK cells are consistent with both the Logistic Regression coefficients and the Random Forest/XGBoost global feature importance reported above (CD74/HLA-DRA/CD79A for B cells; FTL/FTH1/TYROBP for CD14 Monocytes; NKG7/CCL5/CST7/GZMA for NK cells).
+
+**CD4 T cells** again shows the weakest, least cell-type-specific signature — as with the coefficients, no canonical CD4 marker appears at the top; instead NKG7 (an NK cell gene) and MHC-II genes dominate. This is now the third independent method (coefficients, RF/XGBoost global importance, and now RF SHAP) converging on the same finding: CD4 T cells lack a clean gene-level signature in this feature space, consistent with this being the largest, most heterogeneous class (1,175 cells) and the dominant source of cross-model misclassification (primarily with NK cells) noted in the Phase 4 four-model comparison.
+
+**Platelets and Dendritic cells** are not treated as new findings here given n=1 and n=5 — the genes surfaced (TUBB1/GPX1/PPBP/GNG11/PF4/SPARC for Platelets; HLA-DPA1/FCER1A/CD74 for Dendritic cells) are plausible and partially overlap with the coefficient-based results, but the sample sizes are too small to draw conclusions from independently.
+
+#### Conclusion
+
+Once correctly configured — real background data, explicit `max_samples` matching the intended stratified sample, and true-label-restricted averaging to avoid foreground/background cancellation — Random Forest SHAP attribution is consistent with the Logistic Regression coefficients and tree-based feature importance for the four well-supported classes (B cells, CD14 Monocytes, CD4 T cells, NK cells), and reinforces the CD4 T cell heterogeneity finding as a three-method signal rather than a single-model artifact. Next: XGBoost and PyTorch NN SHAP attribution, applying the same background/masker/true-label-restriction approach from the start.
+
 ## Notes for the Final Paper
 
 The preprocessing methodology should be justified using both:

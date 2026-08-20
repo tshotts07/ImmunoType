@@ -53,10 +53,12 @@ progress.**
     compared against the CellMarker 3.0 reference
 -   Random Forest/XGBoost global feature-importance-based gene ranking,
     cross-checked against the Logistic Regression coefficients
+-   Random Forest SHAP attribution (true-label-restricted per-class mean),
+    cross-checked against the coefficient and feature-importance results
 
 ### In Progress
 
--   SHAP analysis
+-   XGBoost and PyTorch NN SHAP attribution
 
 ### Planned
 
@@ -320,10 +322,15 @@ The project aims to record:
 ## Current Next Step
 
 Continue **Phase 5 — Gene-Level Interpretation**: Logistic Regression
-coefficients and Random Forest/XGBoost feature importance are complete —
-all three converge on CD79A and NKG7 as top predictive genes, and two
-independent models flag a proliferation-gene signature within the
-Dendritic cell cluster worth following up on (see
-`docs/research_log.md`). Next, run SHAP to get per-class attribution from
-the tree models and the NN, comparable to what the Logistic Regression
-coefficients already provide directly.
+coefficients, Random Forest/XGBoost feature importance, and Random Forest
+SHAP attribution are complete. CD4 T cells now has a three-method
+signature-weakness finding (coefficients, tree importance, and SHAP all
+lack a clean CD4-specific top gene), and CD79A/NKG7 remain the most
+consistently top-ranked genes across methods (see
+`docs/research_log.md`). The Random Forest SHAP pass required fixing
+three distinct `shap.TreeExplainer` configuration bugs (missing
+background data, silent non-stratified background re-subsampling, and
+signed-SHAP cancellation when foreground equals background) — documented
+in `docs/research_log.md` so the same mistakes aren't repeated. Next,
+apply the same corrected approach to get XGBoost and PyTorch NN SHAP
+attribution.
