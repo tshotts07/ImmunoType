@@ -778,7 +778,7 @@ Four of six classes are dominated by canonical markers already used in Phase 3 a
 
 **Dendritic cells:** FCER1A, CLEC10A, and CD1C are genuine conventional-DC markers, but CLEC4C is a plasmacytoid-DC-specific marker, and several other top genes (BIRC5, TOP2A, ZWINT, KIAA0101) are cell-cycle/proliferation markers rather than DC-identity genes. This may indicate the 43-cell Dendritic cells cluster from Phase 3 is a mixed cDC/pDC population that Leiden clustering did not separate, or may be an artifact of the very small training sample (~34 cells) for this class. Flagged as a limitation rather than resolved here. `src/canonical_markers.py` defines conventional and plasmacytoid dendritic cells as two separate reference panels (`Dendritic_cells`: FCER1A, CD1C, CLEC10A, CST3; `Plasmacytoid_Dendritic_cells`: CLEC4C, GZMB, JCHAIN, IL3RA, TCF4), so CLEC4C appearing alongside the conventional-DC markers here is consistent with the merged-cluster explanation specifically, not just plausible in general.
 
-**CD4 T cells:** the weakest signature of the six coefficient magnitudes are noticeably smaller than other classes, and canonical CD3D/CD3E do not appear in the top 15 (IL7R and CD2 do). This is consistent with CD4 T cells being the largest and most heterogeneous class (1,175 cells) and with the four-model comparison's confusion matrices, where CD4 T cells were the dominant source of misclassification (confused primarily with NK cells) across all four models.
+**CD4 T cells:** the weakest signature of the six. Coefficient magnitudes are noticeably smaller than other classes, and canonical CD3D/CD3E do not appear in the top 15 (IL7R and CD2 do). This is consistent with CD4 T cells being the largest and most heterogeneous class (1,175 cells) and with the four-model comparison's confusion matrices, where CD4 T cells were the dominant source of misclassification (confused primarily with NK cells) across all four models.
 
 #### Conclusion
 
@@ -809,11 +809,11 @@ Full top-20 lists for both models are in `06_gene_interpretation.ipynb`.
 
 #### Cross-Model Consistency
 
-CD79A and NKG7 rank at or near the top in all three interpretation methods tried so far (Logistic Regression coefficients, Random Forest importance, XGBoost importance) three structurally different algorithms (linear, bagged trees, boosted trees) independently converging on the same two genes as maximally decisive. Treated as strong evidence these two genes are genuinely central to distinguishing B cells and NK cells respectively, not an artifact of any one model.
+CD79A and NKG7 rank at or near the top in all three interpretation methods tried so far (Logistic Regression coefficients, Random Forest importance, XGBoost importance): three structurally different algorithms (linear, bagged trees, boosted trees) independently converging on the same two genes as maximally decisive. Treated as strong evidence these two genes are genuinely central to distinguishing B cells and NK cells respectively, not an artifact of any one model.
 
 #### Dendritic Cell Proliferation Signature — Reinforced
 
-The proliferation-gene signature flagged in the Logistic Regression DC coefficients (BIRC5, TOP2A, ZWINT, KIAA0101) reappears independently in XGBoost's global importance list (KIAA0101, ZWINT, STMN1, SMC2, CKS1B), alongside genuine DC markers (SERPINF1, CLEC10A, FCER1A, ENHO). Two structurally unrelated models surfacing the same proliferation signature tied to the same 43-cell cluster raises this from a single-model coincidence to a candidate real finding.
+The proliferation-gene signature flagged in the Logistic Regression DC coefficients (BIRC5, TOP2A, ZWINT, KIAA0101) reappears independently in XGBoost's global importance list (KIAA0101, ZWINT, STMN1, SMC2, CKS1B), alongside genuine DC markers (SERPINF1, CLEC10A, FCER1A, ENHO). Two structurally unrelated models surfacing the same proliferation signature tied to the same 43-cell cluster raises this from a single-model coincidence to a candidate real finding. Not resolved here; flagged as follow-up work (e.g., checking MKI67/proliferation-marker expression specifically within the Dendritic cell cluster) rather than investigated further in this pass.
 
 #### MHC-II Genes in Global Importance
 
@@ -821,7 +821,7 @@ Both models rank several MHC-II genes highly (HLA-DRA, HLA-DRB1, HLA-DPA1, HLA-D
 
 #### Minor Note
 
-Random Forest's list includes some broadly/ubiquitously expressed genes (MALAT1, OAZ1, GPX1) without clear cell-type-identity meaning a known tendency of tree importance to reward genes with high, reliable expression variance generally, not just biologically specific markers.
+Random Forest's list includes some broadly/ubiquitously expressed genes (MALAT1, OAZ1, GPX1) without clear cell-type-identity meaning, a known tendency of tree importance to reward genes with high, reliable expression variance generally, not just biologically specific markers.
 
 #### Conclusion
 
@@ -867,7 +867,7 @@ Tracks true frequencies closely, confirming the fix (previously flat at 0.1667 f
 | NK cells (n=48) | NKG7, CCL5, CST7, GZMA, CTSW, B2M, PRF1, GNLY, GZMK |
 | Platelets (n=1) | TUBB1, GPX1, MPP1, PPBP, SDPR, GNG11, PF4, SPARC, NAP1L1 |
 
-Full top-15 lists are in `06_gene_interpretation.ipynb`. **n is reported explicitly because it varies by two orders of magnitude across classes** (134 down to 1) Dendritic cells (n=5) and especially Platelets (n=1) should be read as illustrative, not as reliable per-gene rankings; a single cell's SHAP attribution is not an average of anything.
+Full top-15 lists are in `06_gene_interpretation.ipynb`. **n is reported explicitly because it varies by two orders of magnitude across classes** (134 down to 1). Dendritic cells (n=5) and especially Platelets (n=1) should be read as illustrative, not as reliable per-gene rankings; a single cell's SHAP attribution is not an average of anything.
 
 #### Comparison Against Prior Methods
 
@@ -881,7 +881,7 @@ This overlap is not just a modeling artifact. `src/canonical_markers.py`'s `CD8_
 
 #### Conclusion
 
-Once correctly configured real background data, explicit `max_samples` matching the intended stratified sample, and true-label-restricted averaging to avoid foreground/background cancellation, Random Forest SHAP attribution is consistent with the Logistic Regression coefficients and tree-based feature importance for the four well-supported classes (B cells, CD14 Monocytes, CD4 T cells, NK cells), and reinforces the CD4 T cell heterogeneity finding as a three-method signal rather than a single-model artifact. Next: XGBoost and PyTorch NN SHAP attribution, applying the same background/masker/true-label-restriction approach from the start.
+Once correctly configured (real background data, explicit `max_samples` matching the intended stratified sample, and true-label-restricted averaging to avoid foreground/background cancellation), Random Forest SHAP attribution is consistent with the Logistic Regression coefficients and tree-based feature importance for the four well-supported classes (B cells, CD14 Monocytes, CD4 T cells, NK cells), and reinforces the CD4 T cell heterogeneity finding as a three-method signal rather than a single-model artifact. Next: XGBoost and PyTorch NN SHAP attribution, applying the same background/masker/true-label-restriction approach from the start.
 
 ## Notes for the Final Paper
 
