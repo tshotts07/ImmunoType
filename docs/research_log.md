@@ -544,7 +544,7 @@ The dataset was successfully reloaded to verify reproducibility.
 - Select 2,000 highly variable genes using the Seurat method.
 - Scale only the highly variable genes.
 - Perform PCA for exploratory analysis and downstream visualization.
-- Reserve gene-level expression matrices—not principal components—for final supervised machine-learning models to maximize biological interpretability.
+- Reserve gene-level expression matrices (not principal components) for final supervised machine-learning models to maximize biological interpretability.
 
 ---
 
@@ -679,7 +679,7 @@ A feedforward network was trained on the same 2,000-HVG feature space (standardi
 - Hidden layers: 2,000 → 256 → 64, each with BatchNorm, ReLU, and dropout (p=0.4)
 - Output: 6 classes (softmax via `CrossEntropyLoss`)
 - Optimizer: Adam, lr=1e-3, weight_decay=1e-4
-- Loss: `CrossEntropyLoss` weighted by inverse class frequency (`compute_class_weight("balanced")`), matching the `class_weight="balanced"` setting used for Logistic Regression and Random Forest — needed given the extreme class imbalance (Platelets: 7 training cells; Dendritic cells: 34)
+- Loss: `CrossEntropyLoss` weighted by inverse class frequency (`compute_class_weight("balanced")`), matching the `class_weight="balanced"` setting used for Logistic Regression and Random Forest, needed given the extreme class imbalance (Platelets: 7 training cells; Dendritic cells: 34)
 - Batch size: 64
 - Random seed: 42 (`torch.manual_seed(42)`)
 
@@ -743,7 +743,7 @@ Per-class performance on the 527-cell held-out test set:
 | XGBoost | 97.91% | 0.921 | 0.979 |
 | Random Forest | 97.53% | 0.896 | 0.975 |
 
-Logistic Regression remains the strongest model overall, but the class-weighted PyTorch NN was the closest competitor and clearly outperformed XGBoost and Random Forest on macro F1 — the metric most sensitive to the rare classes (Dendritic cells, Platelets). This suggests the NN's weighted loss handled class imbalance more effectively than XGBoost/Random Forest's tree-based class weighting on this small, high-dimensional (2,000-feature), imbalanced dataset. As with the other models, Dendritic cells and Platelets have very few test-set examples (9 and 2, respectively), so their per-class metrics should be interpreted cautiously.
+Logistic Regression remains the strongest model overall, but the class-weighted PyTorch NN was the closest competitor and clearly outperformed XGBoost and Random Forest on macro F1, the metric most sensitive to the rare classes (Dendritic cells, Platelets). This suggests the NN's weighted loss handled class imbalance more effectively than XGBoost/Random Forest's tree-based class weighting on this small, high-dimensional (2,000-feature), imbalanced dataset. As with the other models, Dendritic cells and Platelets have very few test-set examples (9 and 2, respectively), so their per-class metrics should be interpreted cautiously.
 
 ### Conclusion
 
@@ -778,7 +778,7 @@ Four of six classes are dominated by canonical markers already used in Phase 3 a
 
 **Dendritic cells:** FCER1A, CLEC10A, and CD1C are genuine conventional-DC markers, but CLEC4C is a plasmacytoid-DC-specific marker, and several other top genes (BIRC5, TOP2A, ZWINT, KIAA0101) are cell-cycle/proliferation markers rather than DC-identity genes. This may indicate the 43-cell Dendritic cells cluster from Phase 3 is a mixed cDC/pDC population that Leiden clustering did not separate, or may be an artifact of the very small training sample (~34 cells) for this class. Flagged as a limitation rather than resolved here. `src/canonical_markers.py` defines conventional and plasmacytoid dendritic cells as two separate reference panels (`Dendritic_cells`: FCER1A, CD1C, CLEC10A, CST3; `Plasmacytoid_Dendritic_cells`: CLEC4C, GZMB, JCHAIN, IL3RA, TCF4), so CLEC4C appearing alongside the conventional-DC markers here is consistent with the merged-cluster explanation specifically, not just plausible in general.
 
-**CD4 T cells:** the weakest signature of the six — coefficient magnitudes are noticeably smaller than other classes, and canonical CD3D/CD3E do not appear in the top 15 (IL7R and CD2 do). This is consistent with CD4 T cells being the largest and most heterogeneous class (1,175 cells) and with the four-model comparison's confusion matrices, where CD4 T cells were the dominant source of misclassification (confused primarily with NK cells) across all four models.
+**CD4 T cells:** the weakest signature of the six coefficient magnitudes are noticeably smaller than other classes, and canonical CD3D/CD3E do not appear in the top 15 (IL7R and CD2 do). This is consistent with CD4 T cells being the largest and most heterogeneous class (1,175 cells) and with the four-model comparison's confusion matrices, where CD4 T cells were the dominant source of misclassification (confused primarily with NK cells) across all four models.
 
 #### Conclusion
 
@@ -788,7 +788,7 @@ Logistic Regression coefficients largely recover the canonical PBMC marker panel
 
 #### Method
 
-Global feature importance (`feature_importances_`) was extracted from the saved Random Forest and XGBoost models (`06_gene_interpretation.ipynb`, loaded from `models/`). Unlike the Logistic Regression coefficients, tree-based importance is a single score per gene reflecting overall usefulness for splitting decisions across the whole ensemble — it is not broken down by cell type. Top 20 genes by importance were extracted for each model.
+Global feature importance (`feature_importances_`) was extracted from the saved Random Forest and XGBoost models (`06_gene_interpretation.ipynb`, loaded from `models/`). Unlike the Logistic Regression coefficients, tree-based importance is a single score per gene reflecting overall usefulness for splitting decisions across the whole ensemble. It is not broken down by cell type. Top 20 genes by importance were extracted for each model.
 
 #### Top Genes by Importance
 
@@ -809,19 +809,19 @@ Full top-20 lists for both models are in `06_gene_interpretation.ipynb`.
 
 #### Cross-Model Consistency
 
-CD79A and NKG7 rank at or near the top in all three interpretation methods tried so far (Logistic Regression coefficients, Random Forest importance, XGBoost importance) — three structurally different algorithms (linear, bagged trees, boosted trees) independently converging on the same two genes as maximally decisive. Treated as strong evidence these two genes are genuinely central to distinguishing B cells and NK cells respectively, not an artifact of any one model.
+CD79A and NKG7 rank at or near the top in all three interpretation methods tried so far (Logistic Regression coefficients, Random Forest importance, XGBoost importance) three structurally different algorithms (linear, bagged trees, boosted trees) independently converging on the same two genes as maximally decisive. Treated as strong evidence these two genes are genuinely central to distinguishing B cells and NK cells respectively, not an artifact of any one model.
 
 #### Dendritic Cell Proliferation Signature — Reinforced
 
-The proliferation-gene signature flagged in the Logistic Regression DC coefficients (BIRC5, TOP2A, ZWINT, KIAA0101) reappears independently in XGBoost's global importance list (KIAA0101, ZWINT, STMN1, SMC2, CKS1B), alongside genuine DC markers (SERPINF1, CLEC10A, FCER1A, ENHO). Two structurally unrelated models surfacing the same proliferation signature tied to the same 43-cell cluster raises this from a single-model coincidence to a candidate real finding. Not resolved here — flagged as follow-up work (e.g., checking MKI67/proliferation-marker expression specifically within the Dendritic cell cluster) rather than investigated further in this pass.
+The proliferation-gene signature flagged in the Logistic Regression DC coefficients (BIRC5, TOP2A, ZWINT, KIAA0101) reappears independently in XGBoost's global importance list (KIAA0101, ZWINT, STMN1, SMC2, CKS1B), alongside genuine DC markers (SERPINF1, CLEC10A, FCER1A, ENHO). Two structurally unrelated models surfacing the same proliferation signature tied to the same 43-cell cluster raises this from a single-model coincidence to a candidate real finding.
 
 #### MHC-II Genes in Global Importance
 
-Both models rank several MHC-II genes highly (HLA-DRA, HLA-DRB1, HLA-DPA1, HLA-DPB1, HLA-DQA1, HLA-DQB1, CD74). This reflects the global nature of tree importance: these genes are useful for distinguishing antigen-presenting cells (B cells, monocytes, dendritic cells) from non-APCs (T cells, NK cells, platelets) across many decision splits, rather than being specific to any single cell type the way NKG7 is specific to NK cells. Not a modeling error — expected behavior for a global (non-per-class) importance measure, and worth noting explicitly so it doesn't read as the model being confused.
+Both models rank several MHC-II genes highly (HLA-DRA, HLA-DRB1, HLA-DPA1, HLA-DPB1, HLA-DQA1, HLA-DQB1, CD74). This reflects the global nature of tree importance: these genes are useful for distinguishing antigen-presenting cells (B cells, monocytes, dendritic cells) from non-APCs (T cells, NK cells, platelets) across many decision splits, rather than being specific to any single cell type the way NKG7 is specific to NK cells. Not a modeling error, expected behavior for a global (non-per-class) importance measure, and worth noting explicitly so it doesn't read as the model being confused.
 
 #### Minor Note
 
-Random Forest's list includes some broadly/ubiquitously expressed genes (MALAT1, OAZ1, GPX1) without clear cell-type-identity meaning — a known tendency of tree importance to reward genes with high, reliable expression variance generally, not just biologically specific markers.
+Random Forest's list includes some broadly/ubiquitously expressed genes (MALAT1, OAZ1, GPX1) without clear cell-type-identity meaning a known tendency of tree importance to reward genes with high, reliable expression variance generally, not just biologically specific markers.
 
 #### Conclusion
 
@@ -831,15 +831,15 @@ Global feature importance from both tree-based models is broadly consistent with
 
 #### Method
 
-`shap.TreeExplainer` (shap 0.52.0) was used to compute per-class SHAP values for the Random Forest model, in `06_gene_interpretation.ipynb`. A 300-cell background/foreground sample was drawn from the training set via a stratified `train_test_split` (`stratify=y_train_encoded, random_state=42`), so that the rare classes remained represented in proportion to their true training frequency (Dendritic cells: 5/300, Platelets: 1/300 — directly reflecting how rare these classes are in the full training set: 34 and 7 cells respectively).
+`shap.TreeExplainer` (shap 0.52.0) was used to compute per-class SHAP values for the Random Forest model, in `06_gene_interpretation.ipynb`. A 300-cell background/foreground sample was drawn from the training set via a stratified `train_test_split` (`stratify=y_train_encoded, random_state=42`), so that the rare classes remained represented in proportion to their true training frequency (Dendritic cells: 5/300, Platelets: 1/300, directly reflecting how rare these classes are in the full training set: 34 and 7 cells respectively).
 
 This step surfaced three distinct, non-obvious bugs, each documented here so they aren't repeated in the XGBoost/NN SHAP work that follows.
 
 **Bug 1 — flat expected values from a missing background dataset.** The first `TreeExplainer` construction (`shap.TreeExplainer(rf_model)`, no `data=` argument) produced `expected_value` flat at ~0.1667 for all six classes, regardless of true class frequency. Root cause, confirmed by reading the shap source directly: with no background data, `feature_perturbation` defaults to `"tree_path_dependent"`, and `expected_value` is computed from the ensemble's internal root-node values — which are themselves computed under `class_weight="balanced"` (used to fit `rf_model`, matching Logistic Regression and Random Forest elsewhere in Phase 4). Balanced weighting is defined so every class's total weight is equal, so the weighted root-node proportion is exactly 1/6 for a 6-class problem, independent of real class counts. This is unrelated to `model_output`: for `RandomForestClassifier` specifically, `model_output="raw"` and `model_output="probability"` are numerically identical, since sklearn RF's native tree output is already probability-space (confirmed empirically and in source). Fixed by supplying a real background dataset (`data=X_sample`), which switches to `feature_perturbation="interventional"` and computes `expected_value` from actual predictions on that data.
 
-**Bug 2 — silent, non-stratified re-subsampling of the background.** Passing `X_sample` (the stratified 300-cell set) directly as `data=` wraps it in `shap.maskers.Independent` with its *default* `max_samples=100`, which silently re-subsamples down to 100 cells via a plain non-stratified shuffle (`shap.utils.sample`, internally fixed `random_state=0`, independent of the notebook's own seed). Checked directly: this subsampling dropped Platelets from 1/300 to 0/100 and Dendritic cells from 5/300 to 2/100 in the actual background used — silently defeating the entire purpose of stratifying. Fixed by constructing the masker explicitly: `shap.maskers.Independent(X_sample, max_samples=300)`.
+**Bug 2 — silent, non-stratified re-subsampling of the background.** Passing `X_sample` (the stratified 300-cell set) directly as `data=` wraps it in `shap.maskers.Independent` with its *default* `max_samples=100`, which silently re-subsamples down to 100 cells via a plain non-stratified shuffle (`shap.utils.sample`, internally fixed `random_state=0`, independent of the notebook's own seed). Checked directly: this subsampling dropped Platelets from 1/300 to 0/100 and Dendritic cells from 5/300 to 2/100 in the actual background used, silently defeating the entire purpose of stratifying. Fixed by constructing the masker explicitly: `shap.maskers.Independent(X_sample, max_samples=300)`.
 
-**Bug 3 — mean signed SHAP collapses to ~0 when foreground equals background.** After fixing 1 and 2, `expected_value` was correctly calibrated (see Results below), but averaging *signed* SHAP values across all 300 samples (mixed classes) produced per-gene means on the order of 1e-19 — floating-point noise, not signal. Per-sample SHAP additivity was verified to hold correctly (`expected_value + shap_values[i].sum() ≈ predict_proba(X_sample[i])` to ~1e-8), so the underlying computation was not broken — the issue is specific to averaging across the same population used as the background: since interventional SHAP values are deviations from the background's own expected value, and here foreground = background = the same mixed-class 300 cells, the mean deviation from the mean is zero by construction, independent of biology. Fixed by restricting the average to the subset of samples truly labeled as class *K* before averaging signed SHAP values for class *K* — that subset is not representative of the full background, so it does not cancel, and it preserves the same signed "genes pushing toward *K*" interpretation as the Logistic Regression coefficients (rather than switching to mean-|SHAP|, which would conflate genes that push toward a class with genes that push away from it).
+**Bug 3 — mean signed SHAP collapses to ~0 when foreground equals background.** After fixing 1 and 2, `expected_value` was correctly calibrated (see Results below), but averaging *signed* SHAP values across all 300 samples (mixed classes) produced per-gene means on the order of 1e-19 — floating-point noise, not signal. Per-sample SHAP additivity was verified to hold correctly (`expected_value + shap_values[i].sum() ≈ predict_proba(X_sample[i])` to ~1e-8), so the underlying computation was not broken, the issue is specific to averaging across the same population used as the background: since interventional SHAP values are deviations from the background's own expected value, and here foreground = background = the same mixed-class 300 cells, the mean deviation from the mean is zero by construction, independent of biology. Fixed by restricting the average to the subset of samples truly labeled as class *K* before averaging signed SHAP values for class *K*. That subset is not representative of the full background, so it does not cancel, and it preserves the same signed "genes pushing toward *K*" interpretation as the Logistic Regression coefficients (rather than switching to mean-|SHAP|, which would conflate genes that push toward a class with genes that push away from it).
 
 #### Verification
 
@@ -867,7 +867,7 @@ Tracks true frequencies closely, confirming the fix (previously flat at 0.1667 f
 | NK cells (n=48) | NKG7, CCL5, CST7, GZMA, CTSW, B2M, PRF1, GNLY, GZMK |
 | Platelets (n=1) | TUBB1, GPX1, MPP1, PPBP, SDPR, GNG11, PF4, SPARC, NAP1L1 |
 
-Full top-15 lists are in `06_gene_interpretation.ipynb`. **n is reported explicitly because it varies by two orders of magnitude across classes** (134 down to 1) — Dendritic cells (n=5) and especially Platelets (n=1) should be read as illustrative, not as reliable per-gene rankings; a single cell's SHAP attribution is not an average of anything.
+Full top-15 lists are in `06_gene_interpretation.ipynb`. **n is reported explicitly because it varies by two orders of magnitude across classes** (134 down to 1) Dendritic cells (n=5) and especially Platelets (n=1) should be read as illustrative, not as reliable per-gene rankings; a single cell's SHAP attribution is not an average of anything.
 
 #### Comparison Against Prior Methods
 
@@ -877,11 +877,11 @@ B cells, CD14 Monocytes, and NK cells are consistent with both the Logistic Regr
 
 This overlap is not just a modeling artifact. `src/canonical_markers.py`'s `CD8_T_cells` reference entry lists NKG7, CCL5, GZMH, and GZMK as supporting markers, the same genes that define the NK cell signature elsewhere in the same file. Because the current six-class scheme has no separate CD8 category (see Phase 3), a cytotoxic or NKT-like subpopulation within the coarse "CD4 T cells" Leiden cluster would be expected to carry these NK-shared markers by the reference's own definition. That reframes the finding: the model is very plausibly picking up a real, reference-documented marker overlap between two lymphocyte subtypes that this project's current cell-type taxonomy does not separate, rather than being confused.
 
-**Platelets and Dendritic cells** are not treated as new findings here given n=1 and n=5 — the genes surfaced (TUBB1/GPX1/PPBP/GNG11/PF4/SPARC for Platelets; HLA-DPA1/FCER1A/CD74 for Dendritic cells) are plausible and partially overlap with the coefficient-based results, but the sample sizes are too small to draw conclusions from independently.
+**Platelets and Dendritic cells** are not treated as new findings here given n=1 and n=5. The genes surfaced (TUBB1/GPX1/PPBP/GNG11/PF4/SPARC for Platelets; HLA-DPA1/FCER1A/CD74 for Dendritic cells) are plausible and partially overlap with the coefficient-based results, but the sample sizes are too small to draw conclusions from independently.
 
 #### Conclusion
 
-Once correctly configured — real background data, explicit `max_samples` matching the intended stratified sample, and true-label-restricted averaging to avoid foreground/background cancellation — Random Forest SHAP attribution is consistent with the Logistic Regression coefficients and tree-based feature importance for the four well-supported classes (B cells, CD14 Monocytes, CD4 T cells, NK cells), and reinforces the CD4 T cell heterogeneity finding as a three-method signal rather than a single-model artifact. Next: XGBoost and PyTorch NN SHAP attribution, applying the same background/masker/true-label-restriction approach from the start.
+Once correctly configured real background data, explicit `max_samples` matching the intended stratified sample, and true-label-restricted averaging to avoid foreground/background cancellation, Random Forest SHAP attribution is consistent with the Logistic Regression coefficients and tree-based feature importance for the four well-supported classes (B cells, CD14 Monocytes, CD4 T cells, NK cells), and reinforces the CD4 T cell heterogeneity finding as a three-method signal rather than a single-model artifact. Next: XGBoost and PyTorch NN SHAP attribution, applying the same background/masker/true-label-restriction approach from the start.
 
 ## Notes for the Final Paper
 
