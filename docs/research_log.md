@@ -567,36 +567,51 @@ The workflow:
 
 ## Phase 3 — Cell-Type Annotation and Dataset Preparation
 
-### Planned Objectives
+### Objective
 
-- Explore PCA structure.
-- Construct neighborhood graphs.
-- Generate UMAP visualizations.
-- Perform clustering.
-- Establish cell-type labels.
-- Prepare machine-learning training datasets.
+Establish cell-type labels for the preprocessed PBMC3K dataset via clustering and marker-based annotation, producing a training dataset for supervised classification.
 
-cluster 0 was supported as CD4-like T cells; cluster 2 was particularly important because the automated score favored FCGR3A monocytes, but the expression-validation plot supported CD14 monocytes; cluster 3 was labeled platelets based on the strong PPBP/PF4 signature.
+### Activities
 
-## Final Cell-Type Annotations
+- Explored PCA structure from the Phase 2 checkpoint.
+- Constructed a neighborhood graph and generated UMAP visualizations.
+- Performed Leiden clustering.
+- Compared cluster-specific differential expression against canonical PBMC markers from CellMarker 3.0 (`src/canonical_markers.py`), using normalized marker-overlap scoring (`src/cluster_annotation.py`: `compare_clusters_to_reference()` / `score_cluster_matches()`, core markers weighted 2x).
+- Validated ambiguous scoring results against marker-expression dot plots.
+- Assigned final cell-type labels and prepared the annotated dataset for machine-learning use.
 
-Leiden clusters were annotated using a combination of:
+### Findings
 
-- cluster-specific differential expression,
-- comparison against canonical PBMC markers from CellMarker 3.0,
-- normalized marker-overlap scoring,
-- and validation using marker-expression dot plots.
+The marker-overlap score alone was not treated as sufficient to assign a label — it was used as a candidate ranking, then checked against expression-level evidence per cluster:
 
-Final annotations:
+- **Cluster 0** — DE genes and marker-overlap scoring supported CD4-like T cell identity; no ambiguity.
+- **Cluster 2** — the automated marker-overlap score favored FCGR3A monocytes, but the marker-expression dot plot showed the CD14 monocyte core markers more clearly expressed across the cluster. This was the one genuinely ambiguous case in the phase (CD14 vs. FCGR3A monocytes are transcriptionally similar and CellMarker 3.0's marker sets for the two overlap), and the dot-plot evidence was weighted over the scalar score.
+- **Cluster 3** — a strong PPBP/PF4 signature unambiguously supported platelet identity.
+- Clusters 1, 4, and 5 (B cells, NK cells, Dendritic cells) were supported consistently by both the marker-overlap score and DE genes, with no ambiguity requiring dot-plot resolution.
 
-- Cluster 0 — CD4 T cells
-- Cluster 1 — B cells
-- Cluster 2 — CD14 Monocytes
-- Cluster 3 — Platelets
-- Cluster 4 — NK cells
-- Cluster 5 — Dendritic cells
+### Final Cell-Type Annotations
 
-The marker-overlap scoring system was used as a candidate annotation method rather than as an automatic ground-truth classifier. Expression-level validation was used to resolve ambiguous cases, particularly the distinction between CD14 and FCGR3A monocytes.
+| Cluster | Cell type |
+|---|---|
+| 0 | CD4 T cells |
+| 1 | B cells |
+| 2 | CD14 Monocytes |
+| 3 | Platelets |
+| 4 | NK cells |
+| 5 | Dendritic cells |
+
+### Phase 3 Decisions
+
+- Treat the marker-overlap scoring system as a candidate-ranking method, not an automatic ground-truth classifier — final assignment is a judgment call informed by the score plus DE genes plus dot-plot validation.
+- For Cluster 2, assign CD14 Monocytes (not FCGR3A Monocytes, despite the higher automated score) based on marker-expression dot-plot validation.
+
+### Rationale
+
+A single scalar overlap score cannot distinguish two transcriptionally similar cell types whose canonical marker sets partially overlap, which is exactly what happened between CD14 and FCGR3A monocytes in Cluster 2 — the score alone would have produced the wrong label. Requiring dot-plot validation whenever the score-based ranking is close catches this kind of case that a fully automated argmax over scores would miss, at the cost of the annotation step not being fully reproducible from the score alone. This caveat carries forward into Phase 4/5: the resulting six-class labels are derived (Leiden + DE + marker scoring + manual validation), not independent ground truth, and "accuracy" against them should be read as reproduction of these derived labels.
+
+### Status
+
+**Complete**
 
 ---
 
@@ -614,7 +629,7 @@ Logistic regression and XGBoost both achieved high classification performance on
 
 The cross-validation results show that logistic regression performs consistently well across different subsets of the training data. The model averaged about 98% accuracy, suggesting that its strong performance was not caused by one lucky train/test split. Performance varied more for the rare cell types, which is expected because there are very few examples of those cells.
 
-Original logistic regression had 98.48% accuracy and 0.989 macro F1. After tuning regularization to C=0.01, reached 98.67% accuracy and 0.990 macro F1. Small test-set improvement,g the tuning was selected using cross-validation rather than the test set.
+Original logistic regression had 98.48% accuracy and 0.989 macro F1. After tuning regularization to C=0.01, reached 98.67% accuracy and 0.990 macro F1. Small test-set improvement; the tuning was selected using cross-validation rather than the test set.
 
 ## PyTorch Environment Issue (Neural Network Setup)
 
