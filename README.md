@@ -132,7 +132,13 @@ including the CD14 vs. FCGR3A monocyte distinction.
 ### Held-Out Test Set
 
 The stratified split contains **2,106 training cells** and **527
-held-out test cells**.
+held-out test cells**, an 80/20 train/test split reused identically
+across all four models rather than a three-way split. Cross-validation
+on the training partition serves the validation role for Logistic
+Regression, Random Forest, and XGBoost; the PyTorch NN carves its own
+train/validation split out of the training partition instead (see
+Neural-Network Work below). The held-out set was evaluated once per
+model, at the end.
 
 | Model | Accuracy | Macro F1 | Weighted F1 |
 |---|---:|---:|---:|
@@ -193,6 +199,14 @@ feature space used by the other three models:
 Architecture and training decisions used only the training/validation
 split; the 527-cell held-out test set was evaluated once, at the end.
 
+The two-hidden-layer design was a mid-implementation change from an
+originally discussed single-hidden-layer network (2,000 → 128 → 6).
+BatchNorm, dropout, and early stopping kept validation macro F1 (0.995)
+and test macro F1 (0.985) close despite the added capacity, which is the
+evidence against overfitting on the small training set, not the
+architecture choice by itself. Output is raw logits: `CrossEntropyLoss`
+applies softmax internally, so no separate `Softmax` layer is used.
+
 ### Results
 
 Early stopping on validation macro F1 (patience=15, max 100 epochs)
@@ -225,6 +239,9 @@ curves are in `docs/research_log.md`.
   external PBMC dataset.
 - Feature harmonization and equivalent preprocessing will be required
   before external testing.
+- The 2,000-HVG feature count was fixed early in Phase 2 and used
+  unchanged through every downstream step. A planned comparison against
+  alternative counts (e.g., 1,000 or 3,000) was never run.
 
 ## Initial Literature
 
@@ -274,8 +291,11 @@ Continue **Phase 5 — Gene-Level Interpretation**: Logistic Regression
 coefficients, Random Forest/XGBoost feature importance, and Random Forest
 SHAP attribution are complete. CD4 T cells now has a three-method
 signature-weakness finding (coefficients, tree importance, and SHAP all
-lack a clean CD4-specific top gene), and CD79A/NKG7 remain the most
-consistently top-ranked genes across methods (see
+lack a clean CD4-specific top gene), consistent with `src/canonical_markers.py`'s
+CD8 T cell reference sharing NK markers (NKG7, CCL5, GZMH, GZMK), a
+plausible cytotoxic or NKT-like subpopulation that the current six-class
+taxonomy does not separate out. CD79A/NKG7 remain the most consistently
+top-ranked genes across methods (see
 `docs/research_log.md`). The Random Forest SHAP pass required fixing
 three distinct `shap.TreeExplainer` configuration bugs (missing
 background data, silent non-stratified background re-subsampling, and

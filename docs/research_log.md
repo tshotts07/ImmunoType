@@ -435,6 +435,10 @@ Importantly, this step represents statistical feature selection rather than biol
 
 The feature space was reduced from **13,692 genes** to **2,000 highly informative genes** for downstream analyses.
 
+### Scope Note
+
+Early planning considered comparing multiple HVG counts (e.g., 1,000 and 3,000) before settling on a final value. In practice, 2,000 was fixed at this step and used unchanged through every downstream phase: clustering, all four ML models, and gene interpretation. The planned comparison was never run. This is a real scope reduction, not a value that was tested and selected, and should be described that way if the choice is questioned.
+
 ---
 
 ## 2.10 Feature Scaling
@@ -582,7 +586,7 @@ Establish cell-type labels for the preprocessed PBMC3K dataset via clustering an
 
 ### Findings
 
-The marker-overlap score alone was not treated as sufficient to assign a label — it was used as a candidate ranking, then checked against expression-level evidence per cluster:
+The marker-overlap score alone was not treated as sufficient to assign a label; it was used as a candidate ranking, then checked against expression-level evidence per cluster:
 
 - **Cluster 0** — DE genes and marker-overlap scoring supported CD4-like T cell identity; no ambiguity.
 - **Cluster 2** — the automated marker-overlap score favored FCGR3A monocytes, but the marker-expression dot plot showed the CD14 monocyte core markers more clearly expressed across the cluster. This was the one genuinely ambiguous case in the phase (CD14 vs. FCGR3A monocytes are transcriptionally similar and CellMarker 3.0's marker sets for the two overlap), and the dot-plot evidence was weighted over the scalar score.
@@ -602,12 +606,12 @@ The marker-overlap score alone was not treated as sufficient to assign a label �
 
 ### Phase 3 Decisions
 
-- Treat the marker-overlap scoring system as a candidate-ranking method, not an automatic ground-truth classifier — final assignment is a judgment call informed by the score plus DE genes plus dot-plot validation.
+- Treat the marker-overlap scoring system as a candidate-ranking method, not an automatic ground-truth classifier; final assignment is a judgment call informed by the score plus DE genes plus dot-plot validation.
 - For Cluster 2, assign CD14 Monocytes (not FCGR3A Monocytes, despite the higher automated score) based on marker-expression dot-plot validation.
 
 ### Rationale
 
-A single scalar overlap score cannot distinguish two transcriptionally similar cell types whose canonical marker sets partially overlap, which is exactly what happened between CD14 and FCGR3A monocytes in Cluster 2 — the score alone would have produced the wrong label. Requiring dot-plot validation whenever the score-based ranking is close catches this kind of case that a fully automated argmax over scores would miss, at the cost of the annotation step not being fully reproducible from the score alone. This caveat carries forward into Phase 4/5: the resulting six-class labels are derived (Leiden + DE + marker scoring + manual validation), not independent ground truth, and "accuracy" against them should be read as reproduction of these derived labels.
+A single scalar overlap score cannot distinguish two transcriptionally similar cell types whose canonical marker sets partially overlap, which is exactly what happened between CD14 and FCGR3A monocytes in Cluster 2; the score alone would have produced the wrong label. Requiring dot-plot validation whenever the score-based ranking is close catches this kind of case that a fully automated argmax over scores would miss, at the cost of the annotation step not being fully reproducible from the score alone. This caveat carries forward into Phase 4/5: the resulting six-class labels are derived (Leiden + DE + marker scoring + manual validation), not independent ground truth, and "accuracy" against them should be read as reproduction of these derived labels.
 
 ### Status
 
@@ -616,6 +620,11 @@ A single scalar overlap score cannot distinguish two transcriptionally similar c
 ---
 
 ## Phase 4 - Model Training
+
+### Split Design
+
+Early planning called for a three-way 70/15/15 train/validation/test split. What was implemented instead was a single stratified 80/20 train/test split (2,106/527 cells), reused identically across all four models so the final comparison is apples-to-apples. Cross-validation on the training partition covers the validation role for Logistic Regression, Random Forest, and XGBoost. Only the PyTorch NN needed a separate, static validation set, and that was carved out of the training partition itself via a further 80/20 split (1,684/422 cells, see PyTorch Feedforward Neural Network below), not from a project-wide three-way split. The 527-cell held-out test set was touched exactly once per model, at the very end, matching this project's reproducibility convention that the held-out split is reserved for final evaluation only.
+
 Model: Logistic Regression
 Features: 2,000 HVGs
 Training cells: 2,106
@@ -673,6 +682,12 @@ A feedforward network was trained on the same 2,000-HVG feature space (standardi
 - Loss: `CrossEntropyLoss` weighted by inverse class frequency (`compute_class_weight("balanced")`), matching the `class_weight="balanced"` setting used for Logistic Regression and Random Forest — needed given the extreme class imbalance (Platelets: 7 training cells; Dendritic cells: 34)
 - Batch size: 64
 - Random seed: 42 (`torch.manual_seed(42)`)
+
+### Deviation from the Originally Discussed Design
+
+Early discussion had sketched a simpler, single-hidden-layer network (2,000 → 128 → 6). The two-hidden-layer 2,000 → 256 → 64 → 6 architecture actually implemented was a mid-implementation change, made before a review step rather than after one. It is defensible on the evidence rather than on assumption alone: BatchNorm, dropout (p=0.4), and early stopping together provided enough regularization that the added capacity did not overfit on only 1,684 training rows. Validation macro F1 (0.995) and test macro F1 (0.985) stayed close (see Results below), and that gap, not the architecture choice by itself, is the actual evidence against overfitting.
+
+Output is raw logits, not `Linear → Softmax`. `CrossEntropyLoss` applies softmax internally, so stacking an explicit `Softmax` layer on top would double-apply it and distort the loss landscape. Early hand-written project notes had specified `Linear → Softmax` paired with `CrossEntropyLoss`; this was caught and corrected before implementation.
 
 ### Training/Validation Split
 
@@ -761,7 +776,7 @@ Full top-15 lists are in `06_gene_interpretation.ipynb`.
 
 Four of six classes are dominated by canonical markers already used in Phase 3 annotation: B cells (CD79A/CD79B/MS4A1), CD14 Monocytes (S100A8/S100A9/LST1, FCER1G/TYROBP), NK cells (NKG7, granzymes, PRF1, GNLY), and Platelets (ITGA2B, PF4, GP9, GNG11) all recover their expected canonical signatures near the top of the list.
 
-**Dendritic cells:** FCER1A, CLEC10A, and CD1C are genuine conventional-DC markers, but CLEC4C is a plasmacytoid-DC-specific marker, and several other top genes (BIRC5, TOP2A, ZWINT, KIAA0101) are cell-cycle/proliferation markers rather than DC-identity genes. This may indicate the 43-cell Dendritic cells cluster from Phase 3 is a mixed cDC/pDC population that Leiden clustering did not separate, or may be an artifact of the very small training sample (~34 cells) for this class. Flagged as a limitation rather than resolved here.
+**Dendritic cells:** FCER1A, CLEC10A, and CD1C are genuine conventional-DC markers, but CLEC4C is a plasmacytoid-DC-specific marker, and several other top genes (BIRC5, TOP2A, ZWINT, KIAA0101) are cell-cycle/proliferation markers rather than DC-identity genes. This may indicate the 43-cell Dendritic cells cluster from Phase 3 is a mixed cDC/pDC population that Leiden clustering did not separate, or may be an artifact of the very small training sample (~34 cells) for this class. Flagged as a limitation rather than resolved here. `src/canonical_markers.py` defines conventional and plasmacytoid dendritic cells as two separate reference panels (`Dendritic_cells`: FCER1A, CD1C, CLEC10A, CST3; `Plasmacytoid_Dendritic_cells`: CLEC4C, GZMB, JCHAIN, IL3RA, TCF4), so CLEC4C appearing alongside the conventional-DC markers here is consistent with the merged-cluster explanation specifically, not just plausible in general.
 
 **CD4 T cells:** the weakest signature of the six — coefficient magnitudes are noticeably smaller than other classes, and canonical CD3D/CD3E do not appear in the top 15 (IL7R and CD2 do). This is consistent with CD4 T cells being the largest and most heterogeneous class (1,175 cells) and with the four-model comparison's confusion matrices, where CD4 T cells were the dominant source of misclassification (confused primarily with NK cells) across all four models.
 
@@ -858,7 +873,9 @@ Full top-15 lists are in `06_gene_interpretation.ipynb`. **n is reported explici
 
 B cells, CD14 Monocytes, and NK cells are consistent with both the Logistic Regression coefficients and the Random Forest/XGBoost global feature importance reported above (CD74/HLA-DRA/CD79A for B cells; FTL/FTH1/TYROBP for CD14 Monocytes; NKG7/CCL5/CST7/GZMA for NK cells).
 
-**CD4 T cells** again shows the weakest, least cell-type-specific signature — as with the coefficients, no canonical CD4 marker appears at the top; instead NKG7 (an NK cell gene) and MHC-II genes dominate. This is now the third independent method (coefficients, RF/XGBoost global importance, and now RF SHAP) converging on the same finding: CD4 T cells lack a clean gene-level signature in this feature space, consistent with this being the largest, most heterogeneous class (1,175 cells) and the dominant source of cross-model misclassification (primarily with NK cells) noted in the Phase 4 four-model comparison.
+**CD4 T cells** again shows the weakest, least cell-type-specific signature. As with the coefficients, no canonical CD4 marker appears at the top; instead NKG7 (an NK cell gene) and MHC-II genes dominate. This is now the third independent method (coefficients, RF/XGBoost global importance, and now RF SHAP) converging on the same finding: CD4 T cells lack a clean gene-level signature in this feature space, consistent with this being the largest, most heterogeneous class (1,175 cells) and the dominant source of cross-model misclassification (primarily with NK cells) noted in the Phase 4 four-model comparison.
+
+This overlap is not just a modeling artifact. `src/canonical_markers.py`'s `CD8_T_cells` reference entry lists NKG7, CCL5, GZMH, and GZMK as supporting markers, the same genes that define the NK cell signature elsewhere in the same file. Because the current six-class scheme has no separate CD8 category (see Phase 3), a cytotoxic or NKT-like subpopulation within the coarse "CD4 T cells" Leiden cluster would be expected to carry these NK-shared markers by the reference's own definition. That reframes the finding: the model is very plausibly picking up a real, reference-documented marker overlap between two lymphocyte subtypes that this project's current cell-type taxonomy does not separate, rather than being confused.
 
 **Platelets and Dendritic cells** are not treated as new findings here given n=1 and n=5 — the genes surfaced (TUBB1/GPX1/PPBP/GNG11/PF4/SPARC for Platelets; HLA-DPA1/FCER1A/CD74 for Dendritic cells) are plausible and partially overlap with the coefficient-based results, but the sample sizes are too small to draw conclusions from independently.
 
