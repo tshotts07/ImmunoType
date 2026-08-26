@@ -53,12 +53,13 @@ progress.**
   compared against the CellMarker 3.0 reference
 - Random Forest/XGBoost global feature-importance-based gene ranking,
   cross-checked against the Logistic Regression coefficients
-- Random Forest SHAP attribution (true-label-restricted per-class mean),
-  cross-checked against the coefficient and feature-importance results
+- Random Forest and XGBoost SHAP attribution (true-label-restricted
+  per-class mean), cross-checked against the coefficient and
+  feature-importance results
 
 ### In Progress
 
-- XGBoost and PyTorch NN SHAP attribution
+- PyTorch NN SHAP attribution
 
 ### Planned
 
@@ -288,18 +289,23 @@ The project aims to record:
 ## Current Next Step
 
 Continue **Phase 5 — Gene-Level Interpretation**: Logistic Regression
-coefficients, Random Forest/XGBoost feature importance, and Random Forest
-SHAP attribution are complete. CD4 T cells now has a three-method
-signature-weakness finding (coefficients, tree importance, and SHAP all
-lack a clean CD4-specific top gene), consistent with `src/canonical_markers.py`'s
-CD8 T cell reference sharing NK markers (NKG7, CCL5, GZMH, GZMK), a
-plausible cytotoxic or NKT-like subpopulation that the current six-class
-taxonomy does not separate out. CD79A/NKG7 remain the most consistently
-top-ranked genes across methods (see
-`docs/research_log.md`). The Random Forest SHAP pass required fixing
-three distinct `shap.TreeExplainer` configuration bugs (missing
-background data, silent non-stratified background re-subsampling, and
-signed-SHAP cancellation when foreground equals background) — documented
-in `docs/research_log.md` so the same mistakes aren't repeated. Next,
-apply the same corrected approach to get XGBoost and PyTorch NN SHAP
-attribution.
+coefficients, Random Forest/XGBoost feature importance, and Random
+Forest and XGBoost SHAP attribution are all complete. CD4 T cells
+continues to show a signature-weakness finding across every method run
+so far (coefficients, tree importance, and both SHAP passes all lack a
+clean CD4-specific top gene), consistent with
+`src/canonical_markers.py`'s CD8 T cell reference sharing NK markers
+(NKG7, CCL5, GZMK) with the top CD4 T cell SHAP genes, a plausible
+cytotoxic or NKT-like subpopulation that the current six-class taxonomy
+does not separate out. CD79A, FTL, and NKG7 remain the single
+largest-attribution gene in their respective classes across all five
+methods run so far (see `docs/research_log.md`). The Random Forest SHAP
+pass required fixing three distinct `shap.TreeExplainer` configuration
+bugs (missing background data, silent non-stratified background
+re-subsampling, and signed-SHAP cancellation when foreground equals
+background); the XGBoost SHAP pass required fixing two further, distinct
+issues (a model-objective detection failure and a stale
+`enable_categorical` flag). Both are documented in
+`docs/research_log.md` so the same mistakes aren't repeated. Only
+PyTorch NN SHAP attribution remains before Phase 5 has a full
+conclusion.

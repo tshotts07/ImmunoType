@@ -883,6 +883,52 @@ This overlap is not just a modeling artifact. `src/canonical_markers.py`'s `CD8_
 
 Once correctly configured (real background data, explicit `max_samples` matching the intended stratified sample, and true-label-restricted averaging to avoid foreground/background cancellation), Random Forest SHAP attribution is consistent with the Logistic Regression coefficients and tree-based feature importance for the four well-supported classes (B cells, CD14 Monocytes, CD4 T cells, NK cells), and reinforces the CD4 T cell heterogeneity finding as a three-method signal rather than a single-model artifact. Next: XGBoost and PyTorch NN SHAP attribution, applying the same background/masker/true-label-restriction approach from the start.
 
+### XGBoost SHAP Attribution
+
+#### Method
+
+The same stratified 300-cell background and true-label-restricted mean signed SHAP methodology used for Random Forest above was applied to the saved XGBoost model (`xgb_model`), in `06_gene_interpretation.ipynb`.
+
+Two distinct configuration bugs were hit and fixed here, different from the three Random Forest bugs documented above.
+
+**Bug 1: SHAP could not resolve the model's objective in probability space.** Constructing `shap.TreeExplainer(xgb_model, data=xgb_masker, model_output="probability")` raised an exception. The model's objective was confirmed correct in three separate places (`xgb_model.objective`, `xgb_model.get_xgb_params()["objective"]`, and the Booster's own config), all reporting `multi:softprob`. This is a SHAP-side detection failure with this XGBoost/SHAP version combination, not a problem with the model itself. Fixed by using the default `"raw"` output space instead of requesting `"probability"`.
+
+**Bug 2: a stale `enable_categorical` flag blocked background-based explanation.** Passing a background dataset then raised `NotImplementedError` from a stale `enable_categorical=True` flag on the model object, despite `feature_types` showing no categorical features anywhere in the 2,000-gene continuous feature matrix. Fixed with `feature_perturbation="tree_path_dependent"`, the fallback SHAP's own error message pointed to. Unlike Random Forest, where `tree_path_dependent` gave a biased baseline (Random Forest Bug 1 above) because of `class_weight="balanced"`, using it here is legitimate: XGBoost received no class-weight-style reweighting during training, so `tree_path_dependent`'s root-node values reflect real learned base rates rather than an artificially flattened baseline.
+
+#### Verification
+
+Two checks were run before any gene-level result was examined:
+
+- **Additivity.** Summing each sample's SHAP values plus the explainer's expected value reproduces the Booster's raw margin output (`predict(output_margin=True)`) to a maximum reconstruction error of 6.67572e-06 across all 300 samples and six classes.
+- **Calibration.** Mean predicted probability (softmax of the raw margins) matches the true class frequency in the same 300-cell sample within 0.0002 on every class: B cells 0.1301 vs. 0.1300, CD14 Monocytes 0.2432 vs. 0.2433, CD4 T cells 0.4467 vs. 0.4467, Dendritic cells 0.0168 vs. 0.0167, NK cells 0.1599 vs. 0.1600, Platelets 0.0034 vs. 0.0033.
+
+Both checks passed cleanly, ruling out the same class of flat or miscalibrated expected-value failure found in Random Forest Bug 1, before trusting the gene-level results below.
+
+#### Results: Top Genes by True-Label-Restricted Mean SHAP
+
+| Cell type (n) | Top genes |
+|---|---|
+| B cells (n=39) | CD79A, CD74, CD79B, MS4A1, CD37, HLA-DQB1, CST3, HLA-DQA1, TYROBP |
+| CD14 Monocytes (n=73) | FTL, CST3, S100A9, S100A6, LST1, FCN1, S100A8, FTH1, TYROBP |
+| CD4 T cells (n=134) | HLA-DRA, NKG7, HLA-DRB1, CCL5, CYBA, IL32, GZMK, CD74, LTB |
+| Dendritic cells (n=5) | FCER1A, CLEC10A, SERPINF1, HLA-DPA1, FTL, MALAT1, H2AFY, HLA-DMA, PYCARD |
+| NK cells (n=48) | NKG7, CST7, CTSW, CCL5, GZMA, GZMK, COTL1, CD247, B2M |
+| Platelets (n=1) | SDPR, GPX1, FERMT3, RGS18, TALDO1, RPS5, CCL5, C2orf88, RPL21 |
+
+Full top-15 lists are in `06_gene_interpretation.ipynb`. As with the Random Forest pass, n varies by two orders of magnitude across classes (134 down to 1); Dendritic cells (n=5) and Platelets (n=1) should be read as illustrative, not as reliable per-gene rankings.
+
+#### Comparison Against Prior Methods
+
+CD79A (B cells), FTL (CD14 Monocytes), and NKG7 (NK cells) remain the single largest mean SHAP value in their respective classes, now confirmed across five independent methods: Logistic Regression coefficients, Random Forest importance, XGBoost importance, Random Forest SHAP, and XGBoost SHAP.
+
+The CD4 T cell / NK cell overlap finding is strengthened here, not just repeated. The full CD4 T cell top-15 includes GZMK (rank 7) alongside NKG7 (rank 2) and CCL5 (rank 4); all three are genes `src/canonical_markers.py` lists as CD8 T cell markers, the same overlap already noted in the Random Forest SHAP comparison above. GZMA also appears, at rank 15, but it is not part of this project's CD8_T_cells or NK_cells marker panels in `src/canonical_markers.py`, so it is reported here without that grounding rather than folded into the same claim. The three verified genes still reinforce the hypothesis that an unresolved cytotoxic or CD8-like subpopulation exists within the "CD4 T cells" Leiden cluster, independent of which tree model computed the attribution.
+
+The Dendritic cell proliferation genes flagged in the Logistic Regression coefficients and XGBoost global importance (BIRC5, TOP2A, ZWINT, KIAA0101) again do not appear here at n=5, matching their absence in the Random Forest SHAP pass. Two independent SHAP passes failing to surface the same genes at the same small sample size is more consistent with underpowered sampling than with genuine disagreement with the coefficient and importance findings.
+
+#### Conclusion
+
+XGBoost SHAP attribution is complete and cross-validated against the Logistic Regression coefficients, both models' global feature importance, and Random Forest SHAP. Only PyTorch NN SHAP attribution remains before Phase 5's interpretation work is finished.
+
 ## Notes for the Final Paper
 
 The preprocessing methodology should be justified using both:
