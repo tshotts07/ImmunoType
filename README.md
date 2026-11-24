@@ -61,17 +61,17 @@ Each notebook reads the checkpoint written by the one before it.
 
 | Notebook | Phase | Produces |
 |---|---|---|
-| `01_dataset_exploration.ipynb` | 1 | Inspection of PBMC3K (no files written beyond the raw download) |
-| `02_dataset_validation.ipynb` | 1 | `data/raw/pbmc68k_reduced/pbmc68k_reduced.h5ad` |
-| `03_preprocessing.ipynb` | 2 and 3 | `data/processed/pbmc3k_*.h5ad`, including `pbmc3k_clustered_annotated.h5ad` |
-| `05_machine_learning.ipynb` | 4 | Trained models and training arrays in `models/` |
-| `06_gene_interpretation.ipynb` | 5 | Coefficient, feature-importance, and SHAP gene rankings |
+| [`01_dataset_exploration.ipynb`](notebooks/01_dataset_exploration.ipynb) | 1 | Inspection of PBMC3K (no files written beyond the raw download) |
+| [`02_dataset_validation.ipynb`](notebooks/02_dataset_validation.ipynb) | 1 | `data/raw/pbmc68k_reduced/pbmc68k_reduced.h5ad` |
+| [`03_preprocessing.ipynb`](notebooks/03_preprocessing.ipynb) | 2 and 3 | `data/processed/pbmc3k_*.h5ad`, including `pbmc3k_clustered_annotated.h5ad` |
+| [`05_machine_learning.ipynb`](notebooks/05_machine_learning.ipynb) | 4 | Trained models and training arrays in `models/` |
+| [`06_gene_interpretation.ipynb`](notebooks/06_gene_interpretation.ipynb) | 5 | Coefficient, feature-importance, and SHAP gene rankings |
 
 There is no notebook 04. Phase 3 (Leiden clustering, differential
 expression, marker scoring, and final annotation) was done at the end
 of `03_preprocessing.ipynb` (cells 47 to 71) rather than in a separate
 notebook, and the numbering was kept so existing references in
-`docs/research_log.md` stay valid.
+[`docs/research_log.md`](docs/research_log.md) stay valid.
 
 ## How to Reproduce
 
@@ -111,10 +111,10 @@ Regression reproduces the reported test accuracy and F1 scores exactly.
 
 ## Data and Annotation
 
-**Source:** 10x Genomics "3k PBMCs from a Healthy Donor" (Chromium
-v1.1.0, hg19; 2,700 cells x 32,738 genes before QC), freely available
+**Source:** 10x Genomics "3k PBMCs from a Healthy Donor" (Cell Ranger
+1.1.0, hg19; 2,700 cells x 32,738 genes before QC), freely available
 from
-[10x Genomics](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)
+[10x Genomics](https://www.10xgenomics.com/datasets/3-k-pbm-cs-from-a-healthy-donor-1-standard-1-1-0)
 and downloaded here through Scanpy's `sc.datasets.pbmc3k()` (see How to
 Reproduce). This is the same dataset used in the Seurat and Scanpy
 PBMC3K tutorials.
@@ -367,10 +367,10 @@ The following articles were supplied at the beginning of the project:
 2. **Cell Reports Methods article, PII S2667-2375(23)00314-4**\
    https://www.cell.com/cell-reports-methods/fulltext/S2667-2375(23)00314-4#fig1
 
-3. **xCell 2.0: robust algorithm for cell type proportion estimation
-   predicts response to immune checkpoint blockade** - Genome Biology
-   (2025)\
-   https://pmc.ncbi.nlm.nih.gov/articles/PMC12492622/
+3. Angel A, Aran D. **xCell 2.0: robust algorithm for cell type
+   proportion estimation predicts response to immune checkpoint
+   blockade.** Genome Biology (2025).\
+   https://doi.org/10.1186/s13059-025-03784-3
 
 ## Technology
 
