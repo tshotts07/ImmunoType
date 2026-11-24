@@ -3,6 +3,7 @@
 # =========================
 
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *$py.class
 
@@ -53,8 +54,7 @@ models/*
 results/*
 !results/.gitkeep
 
-figures/*
-!figures/.gitkeep
+# figures/ is tracked so the README can embed the plots
 
 # =========================
 # OS
@@ -78,3 +78,20 @@ figures/*
 # =========================
 
 *.log
+
+# =========================
+# Downloaded / raw data anywhere in the repo
+# =========================
+
+# scanpy's default download and cache folders (relative to the notebook's cwd)
+notebooks/data/
+notebooks/cache/
+cache/
+
+# Single-cell data files should only live under data/, which is ignored above
+*.h5ad
+*.h5
+*.loom
+*.mtx
+*.mtx.gz
+*.tar.gz

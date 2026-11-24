@@ -623,7 +623,9 @@ A single scalar overlap score cannot distinguish two transcriptionally similar c
 
 ### Split Design
 
-Early planning called for a three-way 70/15/15 train/validation/test split. What was implemented instead was a single stratified 80/20 train/test split (2,106/527 cells), reused identically across all four models so the final comparison is apples-to-apples. Cross-validation on the training partition covers the validation role for Logistic Regression, Random Forest, and XGBoost. Only the PyTorch NN needed a separate, static validation set, and that was carved out of the training partition itself via a further 80/20 split (1,684/422 cells, see PyTorch Feedforward Neural Network below), not from a project-wide three-way split. The 527-cell held-out test set was touched exactly once per model, at the very end, matching this project's reproducibility convention that the held-out split is reserved for final evaluation only.
+Early planning called for a three-way 70/15/15 train/validation/test split. What was implemented instead was a single stratified 80/20 train/test split (2,106/527 cells), reused identically across all four models so the final comparison is apples-to-apples. Cross-validation on the training partition covers the validation role for Logistic Regression, Random Forest, and XGBoost. Only the PyTorch NN needed a separate, static validation set, and that was carved out of the training partition itself via a further 80/20 split (1,684/422 cells, see PyTorch Feedforward Neural Network below), not from a project-wide three-way split.
+
+Correction (2026-11-24): an earlier version of this section said the 527-cell held-out test set was touched exactly once per model, at the very end. That was not accurate. Default Logistic Regression, XGBoost, and Random Forest were each scored on the test set (`05_machine_learning.ipynb` cells 7, 13, and 17, cell numbers from before the 2026-11-24 restructure at the end of this log) before cross-validation and the Logistic Regression grid search were run, and the tuned Logistic Regression was then scored on the test set a second time (cell 28). The grid search selected `C` from training-only cross-validation, not from test scores, but Logistic Regression's test set was still viewed twice, and the evaluation order does not follow this project's convention that the held-out split is reserved for final evaluation only. The PyTorch NN was scored on the test set once, after all architecture and training decisions were made on its validation split.
 
 Model: Logistic Regression
 Features: 2,000 HVGs
@@ -638,7 +640,7 @@ Logistic regression and XGBoost both achieved high classification performance on
 
 The cross-validation results show that logistic regression performs consistently well across different subsets of the training data. The model averaged about 98% accuracy, suggesting that its strong performance was not caused by one lucky train/test split. Performance varied more for the rare cell types, which is expected because there are very few examples of those cells.
 
-Original logistic regression had 98.48% accuracy and 0.989 macro F1. After tuning regularization to C=0.01, reached 98.67% accuracy and 0.990 macro F1. Small test-set improvement; the tuning was selected using cross-validation rather than the test set.
+Original logistic regression had 98.48% accuracy and 0.989 macro F1. After tuning regularization to C=0.01, reached 98.67% accuracy and 0.990 macro F1. Small test-set improvement; the tuning was selected using cross-validation rather than the test set. This was nonetheless the second test-set evaluation of Logistic Regression (default in cell 7, tuned in cell 28), so the 0.9867 figure is not a single untouched-test-set estimate.
 
 ## PyTorch Environment Issue (Neural Network Setup)
 
@@ -747,7 +749,7 @@ Logistic Regression remains the strongest model overall, but the class-weighted 
 
 ### Conclusion
 
-Phase 4 is complete: all four models (Logistic Regression, XGBoost, Random Forest, PyTorch feedforward NN) have been trained, cross-validated where applicable, and evaluated once on the same held-out test set. Logistic Regression is the leading model on this feature space and dataset size, with the NN as a strong second. Next steps move to Phase 5 (gene-level interpretation via coefficients/feature importance and SHAP).
+Phase 4 is complete: all four models (Logistic Regression, XGBoost, Random Forest, PyTorch feedforward NN) have been trained, cross-validated where applicable, and evaluated on the same held-out test set (once each for XGBoost, Random Forest, and the NN; twice for Logistic Regression, default and tuned; the three baseline models were scored before cross-validation, see the correction under Split Design). Logistic Regression is the leading model on this feature space and dataset size, with the NN as a strong second. Next steps move to Phase 5 (gene-level interpretation via coefficients/feature importance and SHAP).
 
 ## Phase 5 — Gene-Level Interpretation
 
@@ -919,7 +921,7 @@ Full top-15 lists are in `06_gene_interpretation.ipynb`. As with the Random Fore
 
 #### Comparison Against Prior Methods
 
-CD79A (B cells), FTL (CD14 Monocytes), and NKG7 (NK cells) remain the single largest mean SHAP value in their respective classes, now confirmed across five independent methods: Logistic Regression coefficients, Random Forest importance, XGBoost importance, Random Forest SHAP, and XGBoost SHAP.
+FTL (CD14 Monocytes) and NKG7 (NK cells) are the top-ranked gene for their class in all three per-class methods: Logistic Regression coefficients, Random Forest SHAP, and XGBoost SHAP. CD79A is the top-ranked B cell gene in two of the three (Logistic Regression coefficients and XGBoost SHAP); Random Forest SHAP ranks CD74 first for B cells, with CD79A third. Random Forest and XGBoost global feature importance are not per-class rankings, so they support these genes as globally important but cannot place a gene first within a class. (Corrected 2026-11-24: an earlier version said all three genes were first across five independent methods.)
 
 The CD4 T cell / NK cell overlap finding is strengthened here, not just repeated. The full CD4 T cell top-15 includes GZMK (rank 7) alongside NKG7 (rank 2) and CCL5 (rank 4); all three are genes `src/canonical_markers.py` lists as CD8 T cell markers, the same overlap already noted in the Random Forest SHAP comparison above. GZMA also appears, at rank 15, but it is not part of this project's CD8_T_cells or NK_cells marker panels in `src/canonical_markers.py`, so it is reported here without that grounding rather than folded into the same claim. The three verified genes still reinforce the hypothesis that an unresolved cytotoxic or CD8-like subpopulation exists within the "CD4 T cells" Leiden cluster, independent of which tree model computed the attribution.
 
@@ -928,6 +930,26 @@ The Dendritic cell proliferation genes flagged in the Logistic Regression coeffi
 #### Conclusion
 
 XGBoost SHAP attribution is complete and cross-validated against the Logistic Regression coefficients, both models' global feature importance, and Random Forest SHAP. Only PyTorch NN SHAP attribution remains before Phase 5's interpretation work is finished.
+
+## Reproducibility Audit and Evaluation-Order Fix (2026-11-24)
+
+### Stale Notebook State
+
+On 2026-09-15, the PyTorch training cell of `05_machine_learning.ipynb` was re-run without re-creating the model, so training continued from already-trained weights (epoch 1 train loss 0.0146 instead of 1.1413, early stop at epoch 17 instead of 29). The models had already been saved before that re-run, so `models/pytorch_nn.pt` matched the committed notebook, not the working copy. The stale output was discarded and every notebook was re-executed top to bottom in a fresh kernel. All regenerated text outputs, all four saved models (maximum prediction or weight difference 0.0), the saved training arrays, and `pbmc3k_clustered_annotated.h5ad` (same cells, Leiden clusters, and labels) were identical to the 2026-09-15 versions, so the pipeline is deterministic end to end.
+
+### Clean-Clone Reproduction
+
+`scripts/download_data.py` now writes `data/raw/pbmc3k/pbmc3k_raw.h5ad` (10x Genomics "3k PBMCs from a Healthy Donor", Chromium v1.1.0, hg19, via `sc.datasets.pbmc3k()`) and checks its SHA-256 (`89a96f1b...a653a1`). `reproduce.sh` downloads the data and executes notebooks 01, 02, 03, 05, and 06 in order. From a fresh clone with a new virtual environment built from `requirements-lock.txt` (Python 3.12.13, scanpy 1.12.2, scikit-learn 1.9.0, xgboost 3.3.0, torch 2.13.0, shap 0.52.0, leidenalg 0.12.0, igraph 1.0.0), `reproduce.sh` completed in 237 seconds on an Apple Silicon Mac and reproduced every model and metric exactly.
+
+### Evaluation Order
+
+`05_machine_learning.ipynb` was reordered so that all cross-validation, Logistic Regression tuning, and NN training happen first on training data only, and each final model is scored on the test set exactly once at the end (cells 30 to 38). The default Logistic Regression is no longer scored on the test set; it is reported by 5-fold cross-validation only. Because every step is seeded, the reorder changed no saved model and no metric. The only change in reported numbers is that the four-model comparison now lists the tuned Logistic Regression (accuracy 0.9867, macro F1 0.9902, weighted F1 0.9867) instead of the default Logistic Regression (0.9848, 0.9888, 0.9848).
+
+### Figures and Tests
+
+All four confusion matrices (`05_machine_learning.ipynb` cells 31, 33, 35, and 37) and per-class Random Forest and XGBoost SHAP top-gene plots (`06_gene_interpretation.ipynb`) are now saved to `figures/`. The SHAP plots use the same true-label-restricted per-class means as the printed tables. The tuned Logistic Regression confusion matrix shows 7 errors out of 527: 2 CD4 T cells predicted as B cells, 2 CD4 T cells predicted as NK cells, and 3 NK cells predicted as CD4 T cells.
+
+`tests/` contains 11 pytest tests (pytest 9.2.0): QC keeps 2,633 of 2,700 cells and 13,692 of 32,738 genes; the annotated checkpoint has the expected cells, 2,000 HVGs, and class counts; the split is 2,106/527, disjoint, stratified, and identical to the saved training array; and the saved tuned Logistic Regression reproduces the reported test accuracy (520/527) and macro and weighted F1 exactly. All 11 pass.
 
 ## Notes for the Final Paper
 

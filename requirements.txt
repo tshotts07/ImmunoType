@@ -9,6 +9,10 @@ scipy
 scanpy
 anndata
 
+# Leiden clustering backend (sc.tl.leiden with flavor="igraph")
+igraph
+leidenalg
+
 # Machine learning
 scikit-learn
 xgboost
@@ -27,3 +31,6 @@ jupyterlab
 
 # Utilities
 tqdm
+
+# Testing
+pytest

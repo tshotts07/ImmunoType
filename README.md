@@ -80,7 +80,69 @@ progress.**
 | 5 | Gene-Level Interpretation | In progress | Interpret coefficients/feature importance and use SHAP to identify biologically meaningful predictive genes. |
 | 6 | External Validation and Final Synthesis | Planned | Test on independently annotated PBMC data and consolidate final conclusions and deliverables. |
 
+## Pipeline Notebooks
+
+Each notebook reads the checkpoint written by the one before it.
+
+| Notebook | Phase | Produces |
+|---|---|---|
+| `01_dataset_exploration.ipynb` | 1 | Inspection of PBMC3K (no files written beyond the raw download) |
+| `02_dataset_validation.ipynb` | 1 | `data/raw/pbmc68k_reduced/pbmc68k_reduced.h5ad` |
+| `03_preprocessing.ipynb` | 2 and 3 | `data/processed/pbmc3k_*.h5ad`, including `pbmc3k_clustered_annotated.h5ad` |
+| `05_machine_learning.ipynb` | 4 | Trained models and training arrays in `models/` |
+| `06_gene_interpretation.ipynb` | 5 | Coefficient, feature-importance, and SHAP gene rankings |
+
+There is no notebook 04. Phase 3 (Leiden clustering, differential
+expression, marker scoring, and final annotation) was done at the end
+of `03_preprocessing.ipynb` (cells 47 to 71) rather than in a separate
+notebook, and the numbering was kept so existing references in
+`docs/research_log.md` stay valid.
+
+## How to Reproduce
+
+From a fresh clone (Python 3.12; on macOS, XGBoost needs OpenMP via
+`brew install libomp`):
+
+``` bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-lock.txt
+./reproduce.sh
+python -m pytest tests/
+```
+
+`reproduce.sh` runs `scripts/download_data.py`, which downloads the raw
+data to `data/raw/pbmc3k/pbmc3k_raw.h5ad` and verifies its SHA-256
+checksum, then executes each notebook in order with
+`jupyter nbconvert --execute`. On an Apple Silicon Mac it takes about
+4 minutes (237 seconds measured from a fresh clone on 2026-11-24), plus
+about 1.5 minutes for `pip install`. Every seed is fixed, and a fresh
+clone reproduced every saved model and reported metric exactly.
+
+Outputs:
+
+- `data/processed/`: preprocessed and annotated AnnData checkpoints
+- `models/`: tuned Logistic Regression, XGBoost, Random Forest, and
+  PyTorch NN, plus the training arrays used by notebook 06
+- `figures/`: confusion matrices for all four models
+  (`confusion_matrix_*.png`) and per-class SHAP top-gene plots
+  (`shap_random_forest_top_genes.png`, `shap_xgboost_top_genes.png`)
+
+The tests in `tests/` run against those outputs (and skip if they have
+not been generated yet). They check that QC keeps 2,633 of 2,700 cells
+and 13,692 of 32,738 genes, that the train/test split is stratified with
+2,106 training and 527 test cells, and that the saved tuned Logistic
+Regression reproduces the reported test accuracy and F1 scores exactly.
+
 ## Data and Annotation
+
+**Source:** 10x Genomics "3k PBMCs from a Healthy Donor" (Chromium
+v1.1.0, hg19; 2,700 cells x 32,738 genes before QC), freely available
+from
+[10x Genomics](https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/pbmc3k)
+and downloaded here through Scanpy's `sc.datasets.pbmc3k()` (see How to
+Reproduce). This is the same dataset used in the Seurat and Scanpy
+PBMC3K tutorials.
 
 The current supervised proof-of-concept dataset is the annotated PBMC3K
 object:
@@ -138,23 +200,75 @@ across all four models rather than a three-way split. Cross-validation
 on the training partition serves the validation role for Logistic
 Regression, Random Forest, and XGBoost; the PyTorch NN carves its own
 train/validation split out of the training partition instead (see
-Neural-Network Work below). The held-out set was evaluated once per
-model, at the end.
+Neural-Network Work below).
 
-| Model | Accuracy | Macro F1 | Weighted F1 |
-|---|---:|---:|---:|
-| Logistic Regression | 0.9848 | 0.9888 | 0.9848 |
-| PyTorch Feedforward NN | 0.9791 | 0.9849 | 0.9791 |
-| XGBoost | 0.9791 | 0.9205 | 0.9788 |
-| Random Forest | 0.9753 | 0.8964 | 0.9745 |
+All cross-validation, Logistic Regression tuning, and NN training
+decisions happen first, on training data only; each final model is then
+scored on the held-out test set exactly once, in the final evaluation
+section of `05_machine_learning.ipynb` (cells 30 to 38). This order was
+put in place on 2026-11-24. Before that, default Logistic Regression,
+XGBoost, and Random Forest were scored on the test set before
+cross-validation and tuning, and Logistic Regression was scored twice
+(default and tuned). Reordering changed no model and no reported
+metric, because every step is seeded and deterministic; the only
+change is that the Logistic Regression test result is now the tuned
+model's, and the default model is reported by cross-validation only.
+
+| Model | Accuracy | Macro F1 | Weighted F1 | Notebook cell |
+|---|---:|---:|---:|---|
+| Logistic Regression (tuned, C=0.01) | 0.9867 | 0.9902 | 0.9867 | nb05 c30 |
+| Logistic Regression (default, C=1.0) | not scored | not scored | not scored | CV only, see below |
+| PyTorch Feedforward NN | 0.9791 | 0.9849 | 0.9791 | nb05 c36 |
+| XGBoost | 0.9791 | 0.9205 | 0.9788 | nb05 c32 |
+| Random Forest | 0.9753 | 0.8964 | 0.9745 | nb05 c34 |
+
+The default Logistic Regression is deliberately not scored on the test
+set, so that each reported model touches it once. Its test score from
+before the 2026-11-24 reorder (accuracy 0.9848, macro F1 0.9888) is
+kept in `docs/research_log.md` for the record.
+
+The tuned Logistic Regression misclassifies 7 of 527 test cells, all
+among CD4 T cells, NK cells, and B cells:
+
+<p align="center">
+  <img src="figures/confusion_matrix_logreg_tuned.png" alt="Confusion matrix for the tuned Logistic Regression on the 527-cell test set" width="520">
+</p>
+
+| True \ Predicted | B cells | CD14 Mono | CD4 T | Dendritic | NK | Platelets |
+|---|---:|---:|---:|---:|---:|---:|
+| B cells | 68 | 0 | 0 | 0 | 0 | 0 |
+| CD14 Monocytes | 0 | 128 | 0 | 0 | 0 | 0 |
+| CD4 T cells | 2 | 0 | 231 | 0 | 2 | 0 |
+| Dendritic cells | 0 | 0 | 0 | 9 | 0 | 0 |
+| NK cells | 0 | 0 | 3 | 0 | 82 | 0 |
+| Platelets | 0 | 0 | 0 | 0 | 0 | 2 |
+
+Confusion matrices for the other three models on the same test set:
+
+<table>
+  <tr>
+    <td><img src="figures/confusion_matrix_pytorch_nn.png" alt="Confusion matrix for the PyTorch feedforward NN" width="100%"></td>
+    <td><img src="figures/confusion_matrix_xgboost.png" alt="Confusion matrix for XGBoost" width="100%"></td>
+    <td><img src="figures/confusion_matrix_random_forest.png" alt="Confusion matrix for Random Forest" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center">PyTorch NN</td>
+    <td align="center">XGBoost</td>
+    <td align="center">Random Forest</td>
+  </tr>
+</table>
 
 ### Five-Fold Cross-Validation on Training Data
 
 | Model | Mean Accuracy | Mean Macro F1 | Mean Weighted F1 |
 |---|---:|---:|---:|
-| Logistic Regression | 0.9796 | 0.9433 | 0.9798 |
+| Logistic Regression (default, C=1.0) | 0.9796 | 0.9433 | 0.9798 |
+| Logistic Regression (tuned, C=0.01) | not computed | 0.9748 | not computed |
 | XGBoost | 0.9744 | 0.9299 | 0.9739 |
 | Random Forest | 0.9763 | 0.9278 | 0.9752 |
+
+The tuned row is GridSearchCV's best mean CV score, which was scored
+on macro F1 only.
 
 ### Tuned Logistic Regression
 
@@ -225,8 +339,35 @@ tree-based models' class weighting on this small, high-dimensional,
 imbalanced dataset. Full per-class metrics and the training/validation
 curves are in `docs/research_log.md`.
 
+## Gene-Level Interpretation (SHAP)
+
+Per-class SHAP attributions were computed for Random Forest and XGBoost
+on a stratified 300-cell sample of the training set. Each panel shows
+the genes with the largest mean SHAP value among cells whose true label
+is that class (`06_gene_interpretation.ipynb`). FTL (CD14 Monocytes) and
+NKG7 (NK cells) rank first in both models and in the Logistic
+Regression coefficients; CD79A ranks first for B cells in XGBoost and
+in the coefficients, while Random Forest ranks CD74 first. The
+Dendritic cell (n=5) and Platelet (n=1) panels are illustrative only.
+
+![Random Forest SHAP: top 10 genes per cell type](figures/shap_random_forest_top_genes.png)
+
+![XGBoost SHAP: top 10 genes per cell type](figures/shap_xgboost_top_genes.png)
+
 ## Important Limitations
 
+- The 2,000 highly variable genes were selected in
+  `03_preprocessing.ipynb` on all 2,633 cells, before the train/test
+  split in `05_machine_learning.ipynb`. Feature selection therefore saw
+  the test cells, which can make test performance slightly optimistic.
+  (Feature scaling, by contrast, is fit on training cells only.)
+- The labels come from Leiden clustering run on the same cells and the
+  same expression data the models learn from. Test accuracy therefore
+  partly measures how well a classifier recovers that clustering, not
+  agreement with an independent ground truth.
+- Dendritic cell and Platelet SHAP results rest on 5 cells and 1 cell,
+  respectively, in the 300-cell SHAP sample (and on 9 and 2 cells in
+  the test set), so they are illustrative only.
 - PBMC3K does not provide authoritative cell-level labels for the
   final six classes used here. The Phase 3 labels were derived from
   Leiden clusters, differential expression, canonical markers, and
@@ -297,9 +438,11 @@ clean CD4-specific top gene), consistent with
 `src/canonical_markers.py`'s CD8 T cell reference sharing NK markers
 (NKG7, CCL5, GZMK) with the top CD4 T cell SHAP genes, a plausible
 cytotoxic or NKT-like subpopulation that the current six-class taxonomy
-does not separate out. CD79A, FTL, and NKG7 remain the single
-largest-attribution gene in their respective classes across all five
-methods run so far (see `docs/research_log.md`). The Random Forest SHAP
+does not separate out. FTL (CD14 Monocytes) and NKG7 (NK cells) are
+the top-ranked gene for their class in all three per-class methods
+(Logistic Regression coefficients, Random Forest SHAP, and XGBoost
+SHAP); CD79A is the top B cell gene in two of the three, with Random
+Forest SHAP ranking CD74 first (see `docs/research_log.md`). The Random Forest SHAP
 pass required fixing three distinct `shap.TreeExplainer` configuration
 bugs (missing background data, silent non-stratified background
 re-subsampling, and signed-SHAP cancellation when foreground equals
