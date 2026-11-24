@@ -364,8 +364,10 @@ The following articles were supplied at the beginning of the project:
    from spatial transcriptomics data** - Nature Communications (2026)\
    https://www.nature.com/articles/s41467-026-68487-0
 
-2. **Cell Reports Methods article, PII S2667-2375(23)00314-4**\
-   https://www.cell.com/cell-reports-methods/fulltext/S2667-2375(23)00314-4#fig1
+2. **scCURE identifies cell types responding to immunotherapy and
+   enables outcome prediction** - Zou X, Liu Y, Wang M, et al. Cell
+   Reports Methods 3(11), 100643 (2023)\
+   https://www.cell.com/cell-reports-methods/fulltext/S2667-2375(23)00314-4
 
 3. Angel A, Aran D. **xCell 2.0: robust algorithm for cell type
    proportion estimation predicts response to immune checkpoint
