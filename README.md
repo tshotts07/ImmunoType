@@ -6,6 +6,19 @@ peripheral blood mononuclear cell (PBMC) immune cell types from
 single-cell RNA sequencing (scRNA-seq) data and identify the genes that
 contribute most strongly to those predictions.
 
+## Key Results
+
+- **Tuned Logistic Regression:** 98.7% accuracy and 0.990 macro F1 on
+  527 held-out test cells.
+- **Four models compared** (Logistic Regression, PyTorch NN, XGBoost,
+  and Random Forest), each scored on the held-out test set exactly once.
+- **Reproducible:** the full pipeline runs from a fresh clone in about
+  4 minutes, and all 11 tests pass.
+
+<p align="center">
+  <img src="figures/confusion_matrix_logreg_tuned.png" alt="Confusion matrix for the tuned Logistic Regression on the 527-cell test set" width="520">
+</p>
+
 ## Core Research Question
 
 > Can machine learning accurately classify PBMC immune cell types from
@@ -27,46 +40,8 @@ contribute most strongly to those predictions.
 
 ## Current Status
 
-**Phases 0–4 are complete. Phase 5 — Gene-Level Interpretation — is in
+**Phases 0–4 are complete. Phase 5 (Gene-Level Interpretation) is in
 progress.**
-
-### Completed
-
-- Repository/environment and reproducible research workflow
-- PBMC dataset exploration
-- PBMC3K quality control and preprocessing
-- Highly variable gene selection and dimensionality reduction
-- Leiden clustering and differential-expression analysis
-- CellMarker 3.0-based canonical marker reference
-- Cluster-to-reference marker scoring
-- Biological validation with marker-expression dot plots
-- Final PBMC3K cell-type annotations
-- Logistic Regression, XGBoost, and Random Forest baselines
-- Five-fold stratified cross-validation for all three baseline models
-- Logistic Regression hyperparameter tuning with training-only
-  GridSearchCV
-- PyTorch feedforward neural-network baseline (class-weighted loss,
-  early stopping on validation macro F1)
-- Four-model comparison (Logistic Regression, XGBoost, Random Forest,
-  PyTorch NN) on the held-out test set
-- Logistic Regression coefficient-based gene ranking per cell type,
-  compared against the CellMarker 3.0 reference
-- Random Forest/XGBoost global feature-importance-based gene ranking,
-  cross-checked against the Logistic Regression coefficients
-- Random Forest and XGBoost SHAP attribution (true-label-restricted
-  per-class mean), cross-checked against the coefficient and
-  feature-importance results
-
-### In Progress
-
-- PyTorch NN SHAP attribution
-
-### Planned
-
-- Investigate predictive genes that are not obvious canonical markers
-- Independent external PBMC validation
-- Final figures, tables, research synthesis, and manuscript-ready
-  documentation
 
 ## Phase Roadmap
 
@@ -282,8 +257,8 @@ training-only cross-validation.
 - **Final held-out weighted F1:** `0.9867`
 
 Logistic Regression is the strongest model overall, with the PyTorch
-neural network as the closest competitor — see below for the completed
-four-model comparison.
+neural network as the closest competitor (see the Held-Out Test Set
+table above for the full four-model comparison).
 
 ## Neural-Network Work
 
@@ -306,7 +281,7 @@ feature space used by the other three models:
 - **Loss weighting:** inverse class frequency
   (`compute_class_weight("balanced")`), matching the
   `class_weight="balanced"` setting used for Logistic Regression and
-  Random Forest — required given the severe class imbalance (7
+  Random Forest (required given the severe class imbalance: 7
   Platelets and 34 Dendritic cells in the training set)
 - **Batch size:** 64
 - **Random seed:** 42
@@ -333,7 +308,7 @@ stopped training at **epoch 29**, restoring the best-epoch weights.
 - **Held-out test weighted F1:** 0.979
 
 The class-weighted PyTorch NN outperformed XGBoost and Random Forest on
-macro F1 — the metric most sensitive to the rare classes — suggesting its
+macro F1 (the metric most sensitive to the rare classes), suggesting its
 weighted loss handled class imbalance more effectively than the
 tree-based models' class weighting on this small, high-dimensional,
 imbalanced dataset. Full per-class metrics and the training/validation
@@ -385,7 +360,7 @@ Dendritic cell (n=5) and Platelet (n=1) panels are illustrative only.
   unchanged through every downstream step. A planned comparison against
   alternative counts (e.g., 1,000 or 3,000) was never run.
 
-## Initial Literature
+## Background Reading
 
 The following articles were supplied at the beginning of the project:
 
@@ -429,26 +404,10 @@ The project aims to record:
 
 ## Current Next Step
 
-Continue **Phase 5 — Gene-Level Interpretation**: Logistic Regression
-coefficients, Random Forest/XGBoost feature importance, and Random
-Forest and XGBoost SHAP attribution are all complete. CD4 T cells
-continues to show a signature-weakness finding across every method run
-so far (coefficients, tree importance, and both SHAP passes all lack a
-clean CD4-specific top gene), consistent with
-`src/canonical_markers.py`'s CD8 T cell reference sharing NK markers
-(NKG7, CCL5, GZMK) with the top CD4 T cell SHAP genes, a plausible
-cytotoxic or NKT-like subpopulation that the current six-class taxonomy
-does not separate out. FTL (CD14 Monocytes) and NKG7 (NK cells) are
-the top-ranked gene for their class in all three per-class methods
-(Logistic Regression coefficients, Random Forest SHAP, and XGBoost
-SHAP); CD79A is the top B cell gene in two of the three, with Random
-Forest SHAP ranking CD74 first (see `docs/research_log.md`). The Random Forest SHAP
-pass required fixing three distinct `shap.TreeExplainer` configuration
-bugs (missing background data, silent non-stratified background
-re-subsampling, and signed-SHAP cancellation when foreground equals
-background); the XGBoost SHAP pass required fixing two further, distinct
-issues (a model-objective detection failure and a stale
-`enable_categorical` flag). Both are documented in
-`docs/research_log.md` so the same mistakes aren't repeated. Only
-PyTorch NN SHAP attribution remains before Phase 5 has a full
-conclusion.
+PyTorch NN SHAP attribution is next, and is the last pass before Phase 5
+(Gene-Level Interpretation) has a full conclusion. Across every method
+run so far, the top CD4 T cell genes overlap NK markers such as NKG7,
+CCL5, and GZMK, suggesting a cytotoxic subpopulation within the CD4 T
+cell cluster that the current six-class taxonomy does not separate.
+Method details, including the SHAP configuration bugs fixed along the
+way, are in `docs/research_log.md`.
