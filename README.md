@@ -205,10 +205,6 @@ kept in `docs/research_log.md` for the record.
 The tuned Logistic Regression misclassifies 7 of 527 test cells, all
 among CD4 T cells, NK cells, and B cells:
 
-<p align="center">
-  <img src="figures/confusion_matrix_logreg_tuned.png" alt="Confusion matrix for the tuned Logistic Regression on the 527-cell test set" width="520">
-</p>
-
 | True \ Predicted | B cells | CD14 Mono | CD4 T | Dendritic | NK | Platelets |
 |---|---:|---:|---:|---:|---:|---:|
 | B cells | 68 | 0 | 0 | 0 | 0 | 0 |
